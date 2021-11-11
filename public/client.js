@@ -31,9 +31,9 @@ function deviceMotion(e) {
   let ac = e.acceleration;
   let acg = e.accelerationIncludingGravity;
   let rot = e.rotationRate;
-  document.getElementById("ac").innerHTML = ac;
-  document.getElementById("acg").innerHTML = acg;
-  document.getElementById("rot").innerHTML = rot;
+  document.getElementById("ac").innerHTML = Math.round(acg.x * 10) / 10;
+  document.getElementById("acg").innerHTML = Math.round(acg.y * 10) / 10;
+  document.getElementById("rot").innerHTML = Math.round(acg.z * 10) / 10;
 }
 
 function deviceOrientation(e) {
@@ -41,27 +41,50 @@ function deviceOrientation(e) {
   let gamma = e.gamma; // Left/Right
   let beta = e.beta; // Front/Back
   let alpha = e.alpha; // Direction
-  document.getElementById("gamma").innerHTML = gamma;
-  document.getElementById("beta").innerHTML = beta;
-  document.getElementById("alpha").innerHTML = alpha;
+  document.getElementById("gamma").innerHTML = Math.round(gamma * 10) / 10;
+  document.getElementById("beta").innerHTML = Math.round(beta * 10) / 10;
+  document.getElementById("alpha").innerHTML = Math.round(alpha * 10) / 10;
+}
+
+function ClickRequestDeviceSensor() {
+  //. ユーザーに「許可」を明示させる必要がある
+  DeviceOrientationEvent.requestPermission()
+    .then(function (response) {
+      if (response === "granted") {
+        window.addEventListener("deviceorientation", deviceOrientation);
+        $("#sensorrequest").css("display", "none");
+        $("#div_chat_screen").css("display", "block");
+      }
+    })
+    .catch(function (e) {
+      console.log(e);
+    });
+
+  DeviceMotionEvent.requestPermission()
+    .then(function (response) {
+      if (response === "granted") {
+        window.addEventListener("devicemotion", deviceMotion);
+        $("#sensorrequest").css("display", "none");
+        $("#div_chat_screen").css("display", "block");
+      }
+    })
+    .catch(function (e) {
+      console.log(e);
+    });
 }
 
 // スマホ（DeviceOrientationEventが取得できるか）判定
 if (window.DeviceOrientationEvent) {
   // iOS13かそれ以上かを判定
+  console.log("requestPermission");
   if (
     DeviceOrientationEvent.requestPermission &&
     typeof DeviceOrientationEvent.requestPermission === "function"
   ) {
-    DeviceOrientationEvent.requestPermission()
-      .then(function (response) {
-        if (response === "granted") {
-          window.addEventListener("deviceorientation", deviceOrientation);
-        }
-      })
-      .catch(function (e) {
-        console.log(e);
-      });
+    $("#div_chat_screen").css("display", "none");
+    var banner =
+      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();" style="z-index:1; position:absolute; width:100%; background-color:#000; color:#fff;><p style="padding:10px;">センサーの有効化</p></div>';
+    $("body").prepend(banner);
   } else {
     window.addEventListener("deviceorientation", deviceOrientation);
   }
@@ -72,15 +95,6 @@ if (window.DeviceMotionEvent) {
     DeviceMotionEvent.requestPermission &&
     typeof DeviceMotionEvent.requestPermission === "function"
   ) {
-    DeviceMotionEvent.requestPermission()
-      .then(function (response) {
-        if (response === "granted") {
-          window.addEventListener("devicemotion", deviceMotion);
-        }
-      })
-      .catch(function (e) {
-        console.log(e);
-      });
   } else {
     window.addEventListener("devicemotion", deviceMotion);
   }

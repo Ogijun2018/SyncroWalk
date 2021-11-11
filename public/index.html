@@ -36,11 +36,17 @@
             <textarea id="textarea_message_received" rows="10" cols="60" readonly="readonly"></textarea>
 
             <br />
+            <div>
+              加速度 X方向: <span id="ac"></span>, Y方向: <span id="acg"></span>, Z方向: <span id="rot"></span>
+              <br />
+              傾き GAMMA: <span id="gamma"></span>, BETA: <span id="beta"></span>, ALPHA: <span id="alpha"></span>
+            </div>
             <button onclick="onclickButton_LeaveChat()">Leave Chat.</button>
         </div>
     </div>
 
     <!-- Script -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="./client.js"></script>
 </body>
