@@ -19,6 +19,9 @@ const g_elementTextareaMessageReceived = document.getElementById(
   "textarea_message_received"
 );
 
+let deviceMotionData = { x: null, y: null, z: null };
+let deviceOrientationData = { gamma: null, beta: null, alpha: null };
+
 let g_mapRtcPeerConnection = new Map();
 
 // クライアントからサーバーへの接続要求
@@ -26,14 +29,30 @@ const g_socket = io.connect();
 
 const canvas = document.getElementById("deviceCanvas");
 
+const IAM = {
+  token: null,
+};
+
+// ユーザー名
+let strInputUserName = "sample";
+g_elementTextUserName.value = strInputUserName;
+
+// サーバーに"join"を送信
+g_socket.emit("join", {});
+
 function deviceMotion(e) {
   e.preventDefault();
   let ac = e.acceleration;
   let acg = e.accelerationIncludingGravity;
   let rot = e.rotationRate;
-  document.getElementById("ac").innerHTML = Math.round(acg.x * 10) / 10;
-  document.getElementById("acg").innerHTML = Math.round(acg.y * 10) / 10;
-  document.getElementById("rot").innerHTML = Math.round(acg.z * 10) / 10;
+  deviceMotionData.x = acg.x;
+  deviceMotionData.y = acg.y;
+  deviceMotionData.z = acg.z;
+  document.getElementById("my_acg_x").innerHTML = Math.round(acg.x * 10) / 10;
+  document.getElementById("my_acg_y").innerHTML = Math.round(acg.y * 10) / 10;
+  document.getElementById("my_acg_z").innerHTML = Math.round(acg.z * 10) / 10;
+
+  onsubmitButton_SendMessage();
 }
 
 function deviceOrientation(e) {
@@ -41,9 +60,12 @@ function deviceOrientation(e) {
   let gamma = e.gamma; // Left/Right
   let beta = e.beta; // Front/Back
   let alpha = e.alpha; // Direction
-  document.getElementById("gamma").innerHTML = Math.round(gamma * 10) / 10;
-  document.getElementById("beta").innerHTML = Math.round(beta * 10) / 10;
-  document.getElementById("alpha").innerHTML = Math.round(alpha * 10) / 10;
+  deviceOrientationData.gamma = gamma;
+  deviceOrientationData.beta = beta;
+  deviceOrientationData.alpha = alpha;
+  document.getElementById("my_gamma").innerHTML = Math.round(gamma * 10) / 10;
+  document.getElementById("my_beta").innerHTML = Math.round(beta * 10) / 10;
+  document.getElementById("my_alpha").innerHTML = Math.round(alpha * 10) / 10;
 }
 
 function ClickRequestDeviceSensor() {
@@ -110,27 +132,6 @@ window.addEventListener("beforeunload", (event) => {
   e.returnValue = ""; // Chrome では returnValue を設定する必要がある
   return ""; // Chrome 以外では、return を設定する必要がある
 });
-
-// 「Join」ボタンを押すと呼ばれる関数
-function onsubmitButton_Join() {
-  console.log("UI Event : 'Join' button clicked.");
-
-  // ユーザー名
-  let strInputUserName = g_elementInputUserName.value;
-  console.log("- User name :", strInputUserName);
-  if (!strInputUserName) {
-    return;
-  }
-  g_elementTextUserName.value = strInputUserName;
-
-  // サーバーに"join"を送信
-  console.log("- Send 'Join' to server");
-  g_socket.emit("join", {});
-
-  // 画面の切り替え
-  g_elementDivJoinScreen.style.display = "none"; // 参加画面の非表示
-  g_elementDivChatScreen.style.display = "block"; // チャット画面の表示
-}
 
 // カメラとマイクのOn/Offのチェックボックスを押すと呼ばれる関数
 function onclickCheckbox_CameraMicrophone() {
@@ -252,7 +253,7 @@ function onsubmitButton_SendMessage() {
 
   if (!g_mapRtcPeerConnection.size) {
     // コネクションオブジェクトがない
-    alert("Connection object does not exist.");
+    // alert("Connection object does not exist!!!");
     return;
   }
   //if( !isDataChannelOpen( g_rtcPeerConnection ) )
@@ -261,10 +262,10 @@ function onsubmitButton_SendMessage() {
   //    return;
   //}
 
-  if (!g_elementTextMessageForSend.value) {
-    alert("Message for send is empty. Please enter the message for send.");
-    return;
-  }
+  // if (!g_elementTextMessageForSend.value) {
+  //   alert("Message for send is empty. Please enter the message for send.");
+  //   return;
+  // }
 
   // メッセージをDataChannelを通して相手に直接送信
   g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
@@ -272,18 +273,23 @@ function onsubmitButton_SendMessage() {
     rtcPeerConnection.datachannel.send(
       JSON.stringify({
         type: "message",
-        data: g_elementTextMessageForSend.value,
+        // data: g_elementTextMessageForSend.value,
+        data: {
+          deviceMotionData,
+          deviceOrientationData,
+        },
+        from: IAM.token,
       })
     );
   });
 
   // 送信メッセージをメッセージテキストエリアへ追加
-  g_elementTextareaMessageReceived.value =
-    g_elementTextMessageForSend.value +
-    "\n" +
-    g_elementTextareaMessageReceived.value; // 一番上に追加
+  // g_elementTextareaMessageReceived.value =
+  //   g_elementTextMessageForSend.value +
+  //   "\n" +
+  //   g_elementTextareaMessageReceived.value; // 一番上に追加
   //g_elementTextareaMessageReceived.value += g_elementTextMessageForSend.value + "\n"; // 一番下に追加
-  g_elementTextMessageForSend.value = "";
+  // g_elementTextMessageForSend.value = "";
 }
 
 // 「Leave Chat.」ボタンを押すと呼ばれる関数
@@ -306,10 +312,6 @@ function onclickButton_LeaveChat() {
 
   // ユーザー名のクリア
   g_elementTextUserName.value = "";
-
-  // 画面の切り替え
-  g_elementDivChatScreen.style.display = "none"; // チャット画面の非表示
-  g_elementDivJoinScreen.style.display = "flex"; // 参加画面の表示
 }
 
 // ↑↑↑UIから呼ばれる関数↑↑↑
@@ -322,6 +324,12 @@ function onclickButton_LeaveChat() {
 // 　クライアント側で、"connect"イベントが発生する
 g_socket.on("connect", () => {
   console.log("Socket Event : connect");
+});
+
+g_socket.on("token", (data) => {
+  console.log("token 受け取り");
+  IAM.token = data.token;
+  console.log(data.token);
 });
 
 // サーバーからのメッセージ受信に対する処理
@@ -403,7 +411,7 @@ g_socket.on("signaling", (objData) => {
 
     if (!rtcPeerConnection) {
       // コネクションオブジェクトがない
-      alert("Connection object does not exist.");
+      alert("Connection object does not exist!!");
       return;
     }
 
@@ -420,7 +428,7 @@ g_socket.on("signaling", (objData) => {
 
     if (!rtcPeerConnection) {
       // コネクションオブジェクトがない
-      alert("Connection object does not exist.");
+      alert("Connection object does not exist!");
       return;
     }
 
@@ -450,15 +458,26 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
   rtcPeerConnection.datachannel.onmessage = (event) => {
     console.log("DataChannel Event : message");
     let objData = JSON.parse(event.data);
-    console.log("- type : ", objData.type);
-    console.log("- data : ", objData.data);
+    // console.log("objData", objData);
+    // console.log("- type : ", objData.type);
+    // console.log("- data : ", objData.data);
+    // console.log("- from: ", objData.from);
 
     if ("message" === objData.type) {
       // 受信メッセージをメッセージテキストエリアへ追加
-      let strMessage = objData.data;
-      g_elementTextareaMessageReceived.value =
-        strMessage + "\n" + g_elementTextareaMessageReceived.value; // 一番上に追加
-      //g_elementTextareaMessageReceived.value += strMessage + "\n";  // 一番下に追加
+      let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
+      let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
+      let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
+      let gamma =
+        Math.round(objData.data.deviceOrientationData.gamma * 100) / 100;
+      let beta =
+        Math.round(objData.data.deviceOrientationData.beta * 100) / 100;
+      let alpha =
+        Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
+
+      let element = getRemoteChatElement(objData.from);
+      element.innerHTML = `加速度 X方向: ${acg_x}, Y方向: ${acg_y}, Z方向: ${acg_z}, 
+      GAMMA: ${gamma}, BETA: ${beta}, ALPHA: ${alpha}`;
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
       console.log("Call : setOfferSDP_and_createAnswerSDP()");
@@ -952,6 +971,7 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   let strElementVideoID = "video_" + strRemoteSocketID;
   let strElementAudioID = "audio_" + strRemoteSocketID;
   let strElementTableID = "table_" + strRemoteSocketID;
+  let strElementChatID = "chat_" + strRemoteSocketID;
 
   // text HTML要素の作成
   let elementText = document.createElement("input");
@@ -963,8 +983,8 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   // video HTML要素の作成
   let elementVideo = document.createElement("video");
   elementVideo.id = strElementVideoID;
-  elementVideo.width = "320";
-  elementVideo.height = "240";
+  elementVideo.width = "0";
+  elementVideo.height = "0";
   elementVideo.style.border = "1px solid black";
   elementVideo.autoplay = true;
 
@@ -972,6 +992,13 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   let elementAudio = document.createElement("audio");
   elementAudio.id = strElementAudioID;
   elementAudio.autoplay = true;
+
+  // チャット表示
+  let elementChat = document.createElement("textarea");
+  elementChat.id = strElementChatID;
+  elementChat.cols = "40";
+  elementChat.rows = "10";
+  elementChat.readOnly = true;
 
   // div HTML要素の作成
   let elementDiv = document.createElement("div");
@@ -983,6 +1010,7 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   elementDiv.appendChild(document.createElement("br")); // 改行
   elementDiv.appendChild(elementVideo); // Video
   elementDiv.appendChild(elementAudio); // Audio
+  elementDiv.appendChild(elementChat); // チャット
   g_elementDivUserInfo.appendChild(elementDiv);
 }
 
@@ -998,6 +1026,13 @@ function getRemoteAudioElement(strRemoteSocketID) {
   let strElementAudioID = "audio_" + strRemoteSocketID;
 
   return document.getElementById(strElementAudioID);
+}
+
+// チャット用のHTML要素の取得
+function getRemoteChatElement(strRemoteSocketID) {
+  let strElementChatID = "chat_" + strRemoteSocketID;
+
+  return document.getElementById(strElementChatID);
 }
 
 // リモート情報表示用のHTML要素の削除

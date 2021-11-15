@@ -19,6 +19,12 @@ const PORT = process.env.PORT || 1337;
 // 　クライアント側で、"connect"イベントが発生する
 io.on("connection", (socket) => {
   console.log("connection : ", socket.id);
+  // トークンを作成
+  const token = socket.id;
+  console.log("トークン生成");
+
+  // 本人にトークンを送付
+  io.to(socket.id).emit("token", { token: token });
 
   // 切断時の処理
   // ・クライアントが切断したら、サーバー側では"disconnect"イベントが発生する
