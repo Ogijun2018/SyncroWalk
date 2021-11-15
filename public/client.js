@@ -266,23 +266,35 @@ function onsubmitButton_SendMessage() {
   //   alert("Message for send is empty. Please enter the message for send.");
   //   return;
   // }
-
-  // メッセージをDataChannelを通して相手に直接送信
-  g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
-    console.log("- Send Message through DataChannel");
-    rtcPeerConnection.datachannel.send(
-      JSON.stringify({
-        type: "message",
-        // data: g_elementTextMessageForSend.value,
-        data: {
-          deviceMotionData,
-          deviceOrientationData,
-        },
-        from: IAM.token,
-      })
-    );
-  });
-
+  if (deviceMotionData.x === null) {
+    g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
+      console.log("- Send Message through DataChannel");
+      rtcPeerConnection.datachannel.send(
+        JSON.stringify({
+          type: "message",
+          // data: g_elementTextMessageForSend.value,
+          data: "PC",
+          from: IAM.token,
+        })
+      );
+    });
+  } else {
+    // メッセージをDataChannelを通して相手に直接送信
+    g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
+      console.log("- Send Message through DataChannel");
+      rtcPeerConnection.datachannel.send(
+        JSON.stringify({
+          type: "message",
+          // data: g_elementTextMessageForSend.value,
+          data: {
+            deviceMotionData,
+            deviceOrientationData,
+          },
+          from: IAM.token,
+        })
+      );
+    });
+  }
   // 送信メッセージをメッセージテキストエリアへ追加
   // g_elementTextareaMessageReceived.value =
   //   g_elementTextMessageForSend.value +
@@ -464,20 +476,25 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
     // console.log("- from: ", objData.from);
 
     if ("message" === objData.type) {
-      // 受信メッセージをメッセージテキストエリアへ追加
-      let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
-      let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
-      let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
-      let gamma =
-        Math.round(objData.data.deviceOrientationData.gamma * 100) / 100;
-      let beta =
-        Math.round(objData.data.deviceOrientationData.beta * 100) / 100;
-      let alpha =
-        Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
+      if (objData.data === "PC") {
+        let element = getRemoteChatElement(objData.from);
+        element.innerHTML = `PCからログイン中`;
+      } else {
+        // 受信メッセージをメッセージテキストエリアへ追加
+        let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
+        let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
+        let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
+        let gamma =
+          Math.round(objData.data.deviceOrientationData.gamma * 100) / 100;
+        let beta =
+          Math.round(objData.data.deviceOrientationData.beta * 100) / 100;
+        let alpha =
+          Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
 
-      let element = getRemoteChatElement(objData.from);
-      element.innerHTML = `加速度 X方向: ${acg_x}, Y方向: ${acg_y}, Z方向: ${acg_z}, 
-      GAMMA: ${gamma}, BETA: ${beta}, ALPHA: ${alpha}`;
+        let element = getRemoteChatElement(objData.from);
+        element.innerHTML = `加速度 X方向: ${acg_x}, Y方向: ${acg_y}, Z方向: ${acg_z}, 
+        GAMMA: ${gamma}, BETA: ${beta}, ALPHA: ${alpha}`;
+      }
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
       console.log("Call : setOfferSDP_and_createAnswerSDP()");
