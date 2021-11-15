@@ -105,7 +105,7 @@ if (window.DeviceOrientationEvent) {
   ) {
     $("#div_chat_screen").css("display", "none");
     var banner =
-      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();" style="z-index:1; position:absolute; width:100%; background-color:#000; color:#fff;><p style="padding:10px;">センサーの有効化</p></div>';
+      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();" style="z-index:1; position:absolute; height: 20%; width:100%; background-color:#000; color:#fff;"><p style="font-size: 50px; font-weight: bold; padding-left: 20px">センサーを有効にする</p></div>';
     $("body").prepend(banner);
   } else {
     window.addEventListener("deviceorientation", deviceOrientation);
