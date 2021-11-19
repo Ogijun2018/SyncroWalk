@@ -32,8 +32,6 @@ if (device() === "mobile") {
   smartphoneScreen.remove();
 }
 
-g_elementDivChatScreen.style.display = "none";
-
 function onsubmitButton_Join() {
   console.log("UI Event : 'Join' button clicked.");
 
@@ -133,8 +131,8 @@ if (window.DeviceOrientationEvent) {
   ) {
     $("#div_chat_screen").css("display", "none");
     var banner =
-      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();" style="z-index:1; position:absolute; height: 20%; width:100%; background-color:#000; color:#fff;"><p style="font-size: 2rem; font-weight: bold;">センサーを有効化</p></div>';
-    $("body").prepend(banner);
+      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();"><p id="sensoricon">>></p></div>';
+    $("#div_join_screen").prepend(banner);
   } else {
     window.addEventListener("deviceorientation", deviceOrientation);
   }

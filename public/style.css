@@ -25,6 +25,11 @@ body {
   align-items: center;
 }
 
+input[type="submit"] {
+  -webkit-appearance: none;
+  border-radius: 100%;
+}
+
 #input_username {
   height: 30px;
   font-size: 20px;
@@ -72,7 +77,7 @@ body {
   height: 100px;
   width: 100px;
   color: #333;
-  border-radius: 100%;
+  z-index: 3;
   border-color: transparent;
   box-shadow: 0 5px 10px #ccc;
   font-size: 25px;
@@ -85,14 +90,35 @@ body {
 .editorial {
   display: block;
   width: 100%;
-  height: 200px;
-  max-height: 200px;
+  height: 150px;
+  max-height: 150px;
   margin: 0;
   z-index: 5;
   bottom: 0;
   position: absolute;
   left: 0px;
   float: left;
+}
+
+#sensorrequest {
+  z-index: 1;
+  position: absolute;
+  right: 20px;
+  top: 15px;
+  height: 60px;
+  width: 60px;
+  border-radius: 100%;
+  background-color: #094067;
+  color: #fffffe;
+}
+
+#sensoricon {
+  font-size: 30px;
+  font-family: brandon-grotesque, sans-serif;
+  position: absolute;
+  left: 18px;
+  top: -25px;
+  color: white;
 }
 
 .parallax1 > use {
