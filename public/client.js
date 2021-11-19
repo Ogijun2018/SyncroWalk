@@ -4,7 +4,10 @@ const g_elementDivChatScreen = document.getElementById("div_chat_screen");
 const g_elementInputUserName = document.getElementById("input_username");
 
 const g_elementDivUserInfo = document.getElementById("div_userinfo");
+const g_tmp = document.getElementById("tmp");
 const g_elementTextUserName = document.getElementById("text_username");
+const smartphoneScreen = document.getElementById("smartphone");
+const desktopScreen = document.getElementById("desktop");
 
 let deviceMotionData = { x: null, y: null, z: null };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
@@ -24,6 +27,26 @@ g_elementTextUserName.value = strInputUserName;
 
 // サーバーに"join"を送信
 g_socket.emit("join", {});
+if (device() === "mobile") {
+  desktopScreen.remove();
+} else if (device() === "desktop") {
+  smartphoneScreen.remove();
+}
+
+function device() {
+  var ua = navigator.userAgent;
+  if (
+    ua.indexOf("iPhone") > 0 ||
+    ua.indexOf("iPod") > 0 ||
+    (ua.indexOf("Android") > 0 && ua.indexOf("Mobile") > 0)
+  ) {
+    return "mobile";
+  } else if (ua.indexOf("iPad") > 0 || ua.indexOf("Android") > 0) {
+    return "tablet";
+  } else {
+    return "desktop";
+  }
+}
 
 function deviceMotion(e) {
   e.preventDefault();
@@ -89,7 +112,7 @@ if (window.DeviceOrientationEvent) {
   ) {
     $("#div_chat_screen").css("display", "none");
     var banner =
-      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();" style="z-index:1; position:absolute; height: 20%; width:100%; background-color:#000; color:#fff;"><p style="font-size: 50px; font-weight: bold; padding-left: 20px">センサーを有効にする</p></div>';
+      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();" style="z-index:1; position:absolute; height: 20%; width:100%; background-color:#000; color:#fff;"><p style="font-size: 2rem; font-weight: bold;">センサーを有効化</p></div>';
     $("body").prepend(banner);
   } else {
     window.addEventListener("deviceorientation", deviceOrientation);
@@ -127,35 +150,20 @@ function SendDeviceInfo() {
   //    alert( "Datachannel is not open." );
   //    return;
   //}
-
-  // PCでデータを閲覧する場合とスマホで情報を送信する場合とで分ける
-  if (deviceMotionData.x === null) {
-    g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
-      console.log("- Send Message through DataChannel");
-      rtcPeerConnection.datachannel.send(
-        JSON.stringify({
-          type: "message",
-          data: "PC",
-          from: IAM.token,
-        })
-      );
-    });
-  } else {
-    // メッセージをDataChannelを通して相手に直接送信
-    g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
-      console.log("- Send Message through DataChannel");
-      rtcPeerConnection.datachannel.send(
-        JSON.stringify({
-          type: "message",
-          data: {
-            deviceMotionData,
-            deviceOrientationData,
-          },
-          from: IAM.token,
-        })
-      );
-    });
-  }
+  // メッセージをDataChannelを通して相手に直接送信
+  g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
+    console.log("- Send Message through DataChannel");
+    rtcPeerConnection.datachannel.send(
+      JSON.stringify({
+        type: "message",
+        data: {
+          deviceMotionData,
+          deviceOrientationData,
+        },
+        from: IAM.token,
+      })
+    );
+  });
 }
 
 function stopSendData() {
@@ -245,7 +253,9 @@ g_socket.on("signaling", (objData) => {
     // リモートユーザー名の設定
     //g_elementTextRemoteUserName.value = objData.username;
     // リモート情報表示用のHTML要素の追加
-    appendRemoteInfoElement(strRemoteSocketID, objData.username);
+    if (device() === "desktop") {
+      appendRemoteInfoElement(strRemoteSocketID, objData.username);
+    }
   } else if ("answer" === objData.type) {
     // onclickButton_SetAnswerSDPthenChatStarts()と同様の処理
     // 設定するAnswerSDPとして、テキストエリアのデータではなく、受信したデータを使用する。
@@ -265,7 +275,9 @@ g_socket.on("signaling", (objData) => {
     // リモートユーザー名の設定
     //g_elementTextRemoteUserName.value = objData.username;
     // リモート情報表示用のHTML要素の追加
-    appendRemoteInfoElement(strRemoteSocketID, objData.username);
+    if (device() === "desktop") {
+      appendRemoteInfoElement(strRemoteSocketID, objData.username);
+    }
   } else if ("candidate" === objData.type) {
     let rtcPeerConnection = g_mapRtcPeerConnection.get(strRemoteSocketID);
 
@@ -633,7 +645,7 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   elementDiv.appendChild(elementVideo); // Video
   elementDiv.appendChild(elementAudio); // Audio
   elementDiv.appendChild(elementChat); // チャット
-  g_elementDivUserInfo.appendChild(elementDiv);
+  g_tmp.appendChild(elementDiv);
 }
 
 // リモート映像表示用のHTML要素の取得
@@ -668,5 +680,5 @@ function removeRemoteInfoElement(strRemoteSocketID) {
       strRemoteSocketID
     );
   }
-  g_elementDivUserInfo.removeChild(elementTable);
+  g_tmp.removeChild(elementTable);
 }

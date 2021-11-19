@@ -2,12 +2,13 @@
 <html>
 <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, user-scale=yes, initial-scale=1.0, maximum-scale=5.0" />
     <title>SyncroWalk</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body style="display: flex; flex-direction: column; width: 100%; height: 100%; margin: 0;">
+  <div id="smartphone">
     <h1 style="margin: 8px">SyncroWalk</h1>
-
     <div style="flex: 1;">
         <!-- <div id="div_join_screen">
             エンターキーによるボタン押下を行うために、<button>ではなく<form>と<input type="submit">を使用。
@@ -32,7 +33,11 @@
             <button onclick="stopSendData()">一時停止</button>
         </div>
     </div>
-
+  </div>
+  <div id="desktop">
+    <h1>This screen is desktop.</h1>
+    <div id="tmp"></div>
+  </div>
     <!-- Script -->
     <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
