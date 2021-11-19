@@ -1,4 +1,7 @@
 ﻿"use strict";
+
+const e = require("cors");
+
 const g_elementDivJoinScreen = document.getElementById("div_join_screen");
 const g_elementDivChatScreen = document.getElementById("div_chat_screen");
 const g_elementInputUserName = document.getElementById("input_username");
@@ -14,6 +17,13 @@ let deviceMotionData = { x: null, y: null, z: null };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 
 let g_mapRtcPeerConnection = new Map();
+// const setFillHeight = () => {
+//   const vh = window.innerHeight * 0.01;
+//   document.documentElement.style.setProperty("--vh", `${vh}px`);
+// };
+
+// window.addEventListener("resize", setFillHeight);
+// setFillHeight();
 
 // クライアントからサーバーへの接続要求
 const g_socket = io.connect();
