@@ -101,7 +101,6 @@ function ClickRequestDeviceSensor() {
       if (response === "granted") {
         window.addEventListener("deviceorientation", deviceOrientation);
         $("#sensorrequest").css("display", "none");
-        $("#div_chat_screen").css("display", "block");
       }
     })
     .catch(function (e) {
@@ -113,7 +112,6 @@ function ClickRequestDeviceSensor() {
       if (response === "granted") {
         window.addEventListener("devicemotion", deviceMotion);
         $("#sensorrequest").css("display", "none");
-        $("#div_chat_screen").css("display", "block");
       }
     })
     .catch(function (e) {
