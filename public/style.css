@@ -25,6 +25,32 @@ body {
   align-items: center;
 }
 
+#div_chat_screen {
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  display: none;
+  flex-direction: column;
+  margin: 10px;
+}
+
+#div_userinfo {
+  height: 100px;
+  width: 100%;
+  padding: 10px;
+}
+
+#control_data {
+  height: 50px;
+  width: 50%;
+  font-size: 25px;
+  font-weight: 400;
+  font-family: brandon-grotesque, sans-serif;
+  background: #ef4565;
+  color: #fffffe;
+  border-radius: 5px;
+}
+
 input[type="submit"] {
   -webkit-appearance: none;
   border-radius: 100%;
@@ -41,9 +67,16 @@ input[type="submit"] {
   outline: 0;
 }
 
+#text_username {
+  border: 3px solid #094067;
+  background-color: #fffffe;
+  font-size: 20px;
+  font-weight: bold;
+  font-family: brandon-grotesque, sans-serif;
+}
+
 #smartphone {
-  height: 90vh;
-  display: flex;
+  height: 100vh;
   flex-direction: column;
   flex: 1;
 }

@@ -1,7 +1,5 @@
 ﻿"use strict";
 
-const e = require("cors");
-
 const g_elementDivJoinScreen = document.getElementById("div_join_screen");
 const g_elementDivChatScreen = document.getElementById("div_chat_screen");
 const g_elementInputUserName = document.getElementById("input_username");
@@ -17,13 +15,6 @@ let deviceMotionData = { x: null, y: null, z: null };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 
 let g_mapRtcPeerConnection = new Map();
-// const setFillHeight = () => {
-//   const vh = window.innerHeight * 0.01;
-//   document.documentElement.style.setProperty("--vh", `${vh}px`);
-// };
-
-// window.addEventListener("resize", setFillHeight);
-// setFillHeight();
 
 // クライアントからサーバーへの接続要求
 const g_socket = io.connect();
@@ -36,10 +27,25 @@ const IAM = {
 // let strInputUserName = "sample";
 // g_elementTextUserName.value = strInputUserName;
 
+function device() {
+  var ua = navigator.userAgent;
+  if (
+    ua.indexOf("iPhone") > 0 ||
+    ua.indexOf("iPod") > 0 ||
+    (ua.indexOf("Android") > 0 && ua.indexOf("Mobile") > 0)
+  ) {
+    return "mobile";
+  } else if (ua.indexOf("iPad") > 0 || ua.indexOf("Android") > 0) {
+    return "tablet";
+  } else {
+    return "desktop";
+  }
+}
+
 if (device() === "mobile") {
-  desktopScreen.remove();
+  smartphoneScreen.style.display = "flex";
 } else if (device() === "desktop") {
-  smartphoneScreen.remove();
+  desktopScreen.style.display = "flex";
 }
 
 function onsubmitButton_Join() {
@@ -59,22 +65,7 @@ function onsubmitButton_Join() {
 
   // 画面の切り替え
   g_elementDivJoinScreen.style.display = "none"; // 参加画面の非表示
-  g_elementDivChatScreen.style.display = "block"; // チャット画面の表示
-}
-
-function device() {
-  var ua = navigator.userAgent;
-  if (
-    ua.indexOf("iPhone") > 0 ||
-    ua.indexOf("iPod") > 0 ||
-    (ua.indexOf("Android") > 0 && ua.indexOf("Mobile") > 0)
-  ) {
-    return "mobile";
-  } else if (ua.indexOf("iPad") > 0 || ua.indexOf("Android") > 0) {
-    return "tablet";
-  } else {
-    return "desktop";
-  }
+  g_elementDivChatScreen.style.display = "flex"; // チャット画面の表示
 }
 
 function deviceMotion(e) {
