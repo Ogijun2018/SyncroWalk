@@ -14,9 +14,7 @@ const io = socketIO(server);
 const PORT = process.env.PORT || 1337;
 
 // 接続時の処理
-// ・サーバーとクライアントの接続が確立すると、
-// 　サーバー側で、"connection"イベント
-// 　クライアント側で、"connect"イベントが発生する
+// サーバー側で "connection" , クライアント側で "connect" 発生
 io.on("connection", (socket) => {
   console.log("connection : ", socket.id);
   // トークンを作成
