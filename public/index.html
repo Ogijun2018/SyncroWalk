@@ -4,38 +4,65 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, user-scale=yes, initial-scale=1.0, maximum-scale=5.0" />
     <title>SyncroWalk</title>
+    <link rel="stylesheet" href="https://use.typekit.net/mos0zao.css">
     <link rel="stylesheet" href="style.css">
 </head>
-<body style="display: flex; flex-direction: column; width: 100%; height: 100%; margin: 0;">
-  <div id="smartphone">
-    <h1 style="margin: 8px">SyncroWalk</h1>
-    <div style="flex: 1;">
-        <!-- <div id="div_join_screen">
-            エンターキーによるボタン押下を行うために、<button>ではなく<form>と<input type="submit">を使用。
-            ボタン押下(=submit)時にページリロードが行われないように、onsubmitの設定の最後に"return false;"を追加
-            <form action="" onsubmit="onsubmitButton_Join(); return false;" style="text-align: center; width: 100%;">
-                User name ( Nick name )<br />
-                <input type="text" id="input_username" placeholder="Enter User name" autofocus><br /><br />
-                <input type="submit" value="Join" />
-            </form>
-        </div> -->
 
-        <div id="div_chat_screen" style="margin: 8px;">
-            <div id="div_userinfo" style="display: flex; flex-wrap: wrap">
-                <div border="1px solid black"><input type="text" id="text_username" readonly="readonly">
-                  <div>
-                    加速度 X方向: <span id="my_acg_x"></span>, Y方向: <span id="my_acg_y"></span>, Z方向: <span id="my_acg_z"></span>
-                    <br />
-                    傾き GAMMA: <span id="my_gamma"></span>, BETA: <span id="my_beta"></span>, ALPHA: <span id="my_alpha"></span>
-                  </div>
-                </div>
+<svg class="editorial"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 24 150 28 "
+     preserveAspectRatio="none">
+ <defs>
+ <path id="gentle-wave"
+    d="M-160 44c30 0 
+        58-18 88-18s
+        58 18 88 18 
+        58-18 88-18 
+        58 18 88 18
+        v44h-352z" />
+  </defs>
+  <g class="parallax1">
+    <use xlink:href="#gentle-wave" x="50" y="3" fill="#ef4565"/>
+  </g>
+  <g class="parallax2">
+    <use xlink:href="#gentle-wave" x="50" y="0" fill="#90b4ce"/>
+  </g>
+  <g class="parallax3">
+    <use xlink:href="#gentle-wave" x="50" y="9" fill="#3da9fc"/>
+  </g>
+  <g class="parallax4">
+    <use xlink:href="#gentle-wave" x="50" y="6" fill="#094067"/>  
+  </g>
+</svg>
+
+<body>
+  <div id="smartphone">
+    <h1 id="hero">SyncroWalk</h1>
+    <div id="div_join_screen">
+        <!-- エンターキーによるボタン押下を行うために、<button>ではなく<form>と<input type="submit">を使用。
+        ボタン押下(=submit)時にページリロードが行われないように、onsubmitの設定の最後に"return false;"を追加 -->
+        <form id="user_form" action="" onsubmit="onsubmitButton_Join(); return false;">
+            <span id="alert">please set user name.</span>
+            <input type="text" id="input_username" placeholder="user name" autofocus>
+            <input id="button_join" type="submit" value="Join!" />
+        </form>
+    </div>
+    <div id="div_chat_screen" style="margin: 8px;">
+        <div id="div_userinfo" style="display: flex; flex-wrap: wrap">
+            <div border="1px solid black"><input type="text" id="text_username" readonly="readonly">
+              <div>
+                加速度 X方向: <span id="my_acg_x"></span>, Y方向: <span id="my_acg_y"></span>, Z方向: <span id="my_acg_z"></span>
+                <br />
+                GAMMA: <span id="my_gamma"></span>, BETA: <span id="my_beta"></span>, ALPHA: <span id="my_alpha"></span>
+              </div>
             </div>
-            <button onclick="stopSendData()">一時停止</button>
         </div>
+        <button onclick="stopSendData()">一時停止</button>
     </div>
   </div>
   <div id="desktop">
-    <h1>This screen is desktop.</h1>
+    <h1>SyncroWalk</h1>
     <div id="tmp"></div>
   </div>
     <!-- Script -->

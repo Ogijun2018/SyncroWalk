@@ -2,6 +2,7 @@
 const g_elementDivJoinScreen = document.getElementById("div_join_screen");
 const g_elementDivChatScreen = document.getElementById("div_chat_screen");
 const g_elementInputUserName = document.getElementById("input_username");
+const join_alert = document.getElementById("alert");
 
 const g_elementDivUserInfo = document.getElementById("div_userinfo");
 const g_tmp = document.getElementById("tmp");
@@ -22,15 +23,35 @@ const IAM = {
 };
 
 // ユーザー名
-let strInputUserName = "sample";
-g_elementTextUserName.value = strInputUserName;
+// let strInputUserName = "sample";
+// g_elementTextUserName.value = strInputUserName;
 
-// サーバーに"join"を送信
-g_socket.emit("join", {});
 if (device() === "mobile") {
   desktopScreen.remove();
 } else if (device() === "desktop") {
   smartphoneScreen.remove();
+}
+
+g_elementDivChatScreen.style.display = "none";
+
+function onsubmitButton_Join() {
+  console.log("UI Event : 'Join' button clicked.");
+
+  // ユーザー名
+  let strInputUserName = g_elementInputUserName.value;
+  if (!strInputUserName) {
+    join_alert.style.display = "block";
+    return;
+  }
+  g_elementTextUserName.value = strInputUserName;
+
+  // サーバーに"join"を送信
+  console.log("- Send 'Join' to server");
+  g_socket.emit("join", {});
+
+  // 画面の切り替え
+  g_elementDivJoinScreen.style.display = "none"; // 参加画面の非表示
+  g_elementDivChatScreen.style.display = "block"; // チャット画面の表示
 }
 
 function device() {
