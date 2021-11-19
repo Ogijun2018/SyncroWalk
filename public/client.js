@@ -195,6 +195,7 @@ g_socket.on("signaling", (objData) => {
   console.log("Socket Event : signaling");
   console.log("- type : ", objData.type);
   console.log("- data : ", objData.data);
+  console.log("- device: ", objData.device);
 
   // 送信元のSocketID
   let strRemoteSocketID = objData.from;
@@ -253,7 +254,7 @@ g_socket.on("signaling", (objData) => {
     // リモートユーザー名の設定
     //g_elementTextRemoteUserName.value = objData.username;
     // リモート情報表示用のHTML要素の追加
-    if (device() === "desktop") {
+    if (device() === "desktop" && objData.device !== "desktop") {
       appendRemoteInfoElement(strRemoteSocketID, objData.username);
     }
   } else if ("answer" === objData.type) {
@@ -275,7 +276,7 @@ g_socket.on("signaling", (objData) => {
     // リモートユーザー名の設定
     //g_elementTextRemoteUserName.value = objData.username;
     // リモート情報表示用のHTML要素の追加
-    if (device() === "desktop") {
+    if (device() === "desktop" && objData.device !== "desktop") {
       appendRemoteInfoElement(strRemoteSocketID, objData.username);
     }
   } else if ("candidate" === objData.type) {
@@ -307,25 +308,20 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
     let objData = JSON.parse(event.data);
 
     if ("message" === objData.type) {
-      if (objData.data === "PC") {
-        let element = getRemoteChatElement(objData.from);
-        element.innerHTML = `PCからログイン中`;
-      } else {
-        // 受信メッセージをメッセージテキストエリアへ追加
-        let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
-        let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
-        let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
-        let gamma =
-          Math.round(objData.data.deviceOrientationData.gamma * 100) / 100;
-        let beta =
-          Math.round(objData.data.deviceOrientationData.beta * 100) / 100;
-        let alpha =
-          Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
+      // 受信メッセージをメッセージテキストエリアへ追加
+      let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
+      let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
+      let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
+      let gamma =
+        Math.round(objData.data.deviceOrientationData.gamma * 100) / 100;
+      let beta =
+        Math.round(objData.data.deviceOrientationData.beta * 100) / 100;
+      let alpha =
+        Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
 
-        let element = getRemoteChatElement(objData.from);
-        element.innerHTML = `加速度 X方向: ${acg_x}, Y方向: ${acg_y}, Z方向: ${acg_z}, 
+      let element = getRemoteChatElement(objData.from);
+      element.innerHTML = `加速度 X方向: ${acg_x}, Y方向: ${acg_y}, Z方向: ${acg_z}, 
         GAMMA: ${gamma}, BETA: ${beta}, ALPHA: ${alpha}`;
-      }
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
       console.log("Call : setOfferSDP_and_createAnswerSDP()");
@@ -431,6 +427,7 @@ function setupRTCPeerConnectionEventHandler(rtcPeerConnection) {
           to: rtcPeerConnection.strRemoteSocketID,
           type: "candidate",
           data: event.candidate,
+          device: device(),
         });
       } else {
         // チャット中
@@ -513,6 +510,7 @@ function createOfferSDP(rtcPeerConnection) {
           type: "offer",
           data: rtcPeerConnection.localDescription,
           username: g_elementTextUserName.value,
+          device: device(),
         });
       } else {
         // チャット中
@@ -562,6 +560,7 @@ function setOfferSDP_and_createAnswerSDP(
           type: "answer",
           data: rtcPeerConnection.localDescription,
           username: g_elementTextUserName.value,
+          device: device(),
         });
       } else {
         // チャット中

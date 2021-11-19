@@ -35,6 +35,7 @@ io.on("connection", (socket) => {
   socket.on("signaling", (objData) => {
     console.log("signaling : ", socket.id);
     console.log("- type : ", objData.type);
+    console.log("- device: ", objData.device);
 
     // 指定の相手に送信
     if ("to" in objData) {
