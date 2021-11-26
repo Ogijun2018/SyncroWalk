@@ -1,27 +1,19 @@
-"use strict"; // 厳格モードとする
+"use strict";
 
-// モジュール
 const express = require("express");
 const http = require("http");
 const socketIO = require("socket.io");
-
-// オブジェクト
 const app = express();
 const server = http.Server(app);
 const io = socketIO(server);
 
-// 定数
 const PORT = process.env.PORT || 1337;
 
 // 接続時の処理
 // サーバー側で "connection" , クライアント側で "connect" 発生
 io.on("connection", (socket) => {
   console.log("connection : ", socket.id);
-  // トークンを作成
   const token = socket.id;
-  console.log("トークン生成");
-
-  // 本人にトークンを送付
   io.to(socket.id).emit("token", { token: token });
 
   // 切断時の処理
@@ -31,7 +23,7 @@ io.on("connection", (socket) => {
   });
 
   // signalingデータ受信時の処理
-  // ・クライアント側のsignalingデータ送信「socket.emit( "signaling", objData );」に対する処理
+  // ・クライアント側のsignalingデータ送信 socket.emit( "signaling", objData ); に対する処理
   socket.on("signaling", (objData) => {
     console.log("signaling : ", socket.id);
     console.log("- type : ", objData.type);
@@ -49,19 +41,15 @@ io.on("connection", (socket) => {
   });
 
   // ビデオチャット参加時の処理
-  socket.on("join", (objData) => {
+  socket.on("join", () => {
     console.log("join : ", socket.id);
 
-    // 「join」を送信元以外の全員に送信
-    // 送信元SocketIDを送信データに付与し、送信元以外の全員に送信
+    // join/socketIDを送信元以外の全員に送信
     socket.broadcast.emit("signaling", { from: socket.id, type: "join" });
   });
 });
 
-// 公開フォルダの指定
 app.use(express.static(__dirname + "/public"));
-
-// サーバーの起動
 server.listen(PORT, () => {
   console.log("Server on port %d", PORT);
 });

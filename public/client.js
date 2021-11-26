@@ -15,33 +15,27 @@ let filterData = { x: 0, y: 0, z: 0 };
 let axis_result = { x: 0, y: 0, z: 0 };
 let axis_new = { x: 0, y: 0, z: 0 };
 let axis_old = { x: 0, y: 0, z: 0 };
-let deviceMotionData = { x: null, y: null, z: null };
+let deviceMotionData = { x: 0, y: 0, z: 0 };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 
 let g_mapRtcPeerConnection = new Map();
 
 // 動的しきい値のサンプル数
 const THRESHOLD = 50;
-// 歩数
 let stepCount = 0;
-// sampling counter
 let sampleCount = 0;
-// filter count
 let filterCount = 0;
-let faultStep = 0;
 
 // make the maximum register min and minimum register max
 // so that they can be updated at the next cycle immediately
-let AC_X_MIN = 100;
-let AC_X_MAX = -100;
-let AC_Y_MIN = 100;
-let AC_Y_MAX = -100;
-let AC_Z_MIN = 100;
-let AC_Z_MAX = -100;
+let acXmin,
+  acYmin,
+  acZmin = 100;
+let acXmax,
+  acYmax,
+  acZmax = -100;
 
-let DC_X;
-let DC_Y;
-let DC_Z;
+let dcX, dcY, dcZ;
 
 // 加速度変化の最も大きい軸
 let thresholdLevel = 0;
@@ -98,14 +92,16 @@ function deviceMotion(e) {
   e.preventDefault();
   let ac = e.acceleration;
   let acg = e.accelerationIncludingGravity;
+  // filterDataがちゃんと足されているか確認する
+  console.log(filterData);
 
   if (filterCount < 4) {
     // save the last 3-axis samples to the shift registers
     // for sum filtering
     filterCount++;
-    filterData.x = filterData.x + ac.x;
-    filterData.y = filterData.y + ac.y;
-    filterData.z = filterData.z + ac.z;
+    filterData.x += ac.x;
+    filterData.y += ac.y;
+    filterData.z += ac.z;
     return;
   } else {
     filterCount = 0;
@@ -118,41 +114,24 @@ function deviceMotion(e) {
   }
 
   // find 3-axis max value and min value
-  if (axis_result.x < AC_X_MIN) {
-    AC_X_MIN = axis_result.x;
-  }
-  if (axis_result.y < AC_Y_MIN) {
-    AC_Y_MIN = axis_result.y;
-  }
-  if (axis_result.z < AC_Z_MIN) {
-    AC_Z_MIN = axis_result.z;
-  }
-  if (axis_result.x > AC_X_MAX) {
-    AC_X_MAX = axis_result.x;
-  }
-  if (axis_result.y > AC_Y_MAX) {
-    AC_Y_MAX = axis_result.y;
-  }
-  if (axis_result.z > AC_Z_MAX) {
-    AC_Z_MAX = axis_result.z;
-  }
+  acXmin = Math.min(axis_result.x, acXmin);
+  acYmin = Math.min(axis_result.y, acYmin);
+  acZmin = Math.min(axis_result.z, acZmin);
+  acXmax = Math.max(axis_result.x, acXmax);
+  acYmax = Math.max(axis_result.y, acYmax);
+  acZmax = Math.max(axis_result.z, acZmax);
 
   sampleCount++;
 
   if (sampleCount > THRESHOLD) {
-    console.log("kita");
     sampleCount = 0;
     // compute peak-to-peak value and dc value for each axis
-    DC_X = (AC_X_MAX - AC_X_MIN) / 2;
-    DC_Y = (AC_Y_MAX - AC_Y_MIN) / 2;
-    DC_Z = (AC_Z_MAX - AC_Z_MIN) / 2;
+    dcX = (acXmax - acXmin) / 2;
+    dcY = (acYmax - acYmin) / 2;
+    dcZ = (acZmax - acZmin) / 2;
     // reinitate the values of the max and min for comparing
-    AC_X_MAX = AC_Y_MAX = AC_Z_MAX = -100;
-    AC_X_MIN = AC_Y_MIN = AC_Z_MIN = 100;
-
-    // reset the flag of a fault step to 0
-    faultStep = 0;
-
+    acXmax = acYmax = acZmax = -100;
+    acXmin = acYmin = acZmin = 100;
     // based on the Vp-p, set the dynamic precision
     // these values are determined by customer
   }
@@ -165,8 +144,6 @@ function deviceMotion(e) {
 
   // 動的精度はとりあえず1.0の固定値
   if (resultVector > 1.0) {
-    console.log("resultVector > 1.0");
-    console.log("resultVector =", resultVector);
     axis_old = { x: axis_new.x, y: axis_new.y, z: axis_new.z };
     axis_new = { x: axis_result.x, y: axis_result.y, z: axis_result.z };
   } else {
@@ -179,33 +156,18 @@ function deviceMotion(e) {
   let abs_y_change = Math.abs(axis_result.y);
   let abs_z_change = Math.abs(axis_result.z);
   if (abs_x_change > abs_y_change && abs_x_change > abs_z_change) {
-    // x軸が一番大きい場合
-    thresholdLevel = DC_X;
-    if (
-      axis_old.x > thresholdLevel &&
-      thresholdLevel > axis_new.x &&
-      faultStep === 0
-    ) {
+    thresholdLevel = dcX;
+    if (axis_old.x > thresholdLevel && thresholdLevel > axis_new.x) {
       stepCount++;
     }
   } else if (abs_y_change > abs_x_change && abs_y_change > abs_z_change) {
-    // y軸が一番大きい場合
-    thresholdLevel = DC_Y;
-    if (
-      axis_old.y > thresholdLevel &&
-      thresholdLevel > axis_new.y &&
-      faultStep === 0
-    ) {
+    thresholdLevel = dcY;
+    if (axis_old.y > thresholdLevel && thresholdLevel > axis_new.y) {
       stepCount++;
     }
   } else if (abs_z_change > abs_x_change && abs_z_change > abs_y_change) {
-    //z軸が一番大きい場合
-    thresholdLevel = DC_Z;
-    if (
-      axis_old.z > thresholdLevel &&
-      thresholdLevel > axis_new.z &&
-      faultStep === 0
-    ) {
+    thresholdLevel = dcZ;
+    if (axis_old.z > thresholdLevel && thresholdLevel > axis_new.z) {
       stepCount++;
     }
   }
@@ -214,12 +176,12 @@ function deviceMotion(e) {
   deviceMotionData.y = ac.y;
   deviceMotionData.z = ac.z;
 
-  document.getElementById("my_acg_x").innerHTML = AC_X_MIN;
-  document.getElementById("XMAX").innerHTML = AC_X_MAX;
-  document.getElementById("my_acg_y").innerHTML = AC_Y_MIN;
-  document.getElementById("YMAX").innerHTML = AC_Y_MAX;
-  document.getElementById("my_acg_z").innerHTML = AC_Z_MIN;
-  document.getElementById("ZMAX").innerHTML = AC_Z_MAX;
+  document.getElementById("my_acg_x").innerHTML = acXmin;
+  document.getElementById("XMAX").innerHTML = acXmax;
+  document.getElementById("my_acg_y").innerHTML = acYmin;
+  document.getElementById("YMAX").innerHTML = acYmax;
+  document.getElementById("my_acg_z").innerHTML = acZmin;
+  document.getElementById("ZMAX").innerHTML = acZmax;
   document.getElementById("step").innerHTML = stepCount;
   SendDeviceInfo();
 }
