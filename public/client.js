@@ -92,10 +92,8 @@ function deviceMotion(e) {
   e.preventDefault();
   let ac = e.acceleration;
   let acg = e.accelerationIncludingGravity;
-  // filterDataがちゃんと足されているか確認する
-  console.log(filterData);
 
-  if (filterCount < 4) {
+  if (filterCount < 3) {
     // save the last 3-axis samples to the shift registers
     // for sum filtering
     filterCount++;
@@ -141,6 +139,9 @@ function deviceMotion(e) {
       Math.pow(axis_result.y, 2) +
       Math.pow(axis_result.z, 2)
   );
+
+  console.log("resultVector=");
+  console.log(resultVector);
 
   // 動的精度はとりあえず1.0の固定値
   if (resultVector > 1.0) {
