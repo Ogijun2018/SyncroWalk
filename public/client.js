@@ -17,6 +17,8 @@ let axis_new = { x: 0, y: 0, z: 0 };
 let axis_old = { x: 0, y: 0, z: 0 };
 let deviceMotionData = { x: 0, y: 0, z: 0 };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
+let username = "";
+let labelData = [];
 
 let g_mapRtcPeerConnection = new Map();
 
@@ -73,6 +75,7 @@ function onsubmitButton_Join() {
 
   // ユーザー名
   let strInputUserName = g_elementInputUserName.value;
+  username = g_elementInputUserName.value;
   if (!strInputUserName) {
     join_alert.style.display = "block";
     return;
@@ -140,9 +143,6 @@ function deviceMotion(e) {
       Math.pow(axis_result.z, 2)
   );
 
-  console.log("resultVector=");
-  console.log(resultVector);
-
   // 動的精度はとりあえず1.0の固定値
   if (resultVector > 1.0) {
     axis_old = { x: axis_new.x, y: axis_new.y, z: axis_new.z };
@@ -160,31 +160,31 @@ function deviceMotion(e) {
     thresholdLevel = dcX;
     if (axis_old.x > thresholdLevel && thresholdLevel > axis_new.x) {
       stepCount++;
+      document.getElementById("step").innerHTML = stepCount;
+      console.log("stepCount up");
+      SendDeviceInfo();
     }
   } else if (abs_y_change > abs_x_change && abs_y_change > abs_z_change) {
     thresholdLevel = dcY;
     if (axis_old.y > thresholdLevel && thresholdLevel > axis_new.y) {
       stepCount++;
+      document.getElementById("step").innerHTML = stepCount;
+      console.log("stepCount up");
+      SendDeviceInfo();
     }
   } else if (abs_z_change > abs_x_change && abs_z_change > abs_y_change) {
     thresholdLevel = dcZ;
     if (axis_old.z > thresholdLevel && thresholdLevel > axis_new.z) {
       stepCount++;
+      document.getElementById("step").innerHTML = stepCount;
+      console.log("stepCount up");
+      SendDeviceInfo();
     }
   }
 
   deviceMotionData.x = ac.x;
   deviceMotionData.y = ac.y;
   deviceMotionData.z = ac.z;
-
-  document.getElementById("my_acg_x").innerHTML = acXmin;
-  document.getElementById("XMAX").innerHTML = acXmax;
-  document.getElementById("my_acg_y").innerHTML = acYmin;
-  document.getElementById("YMAX").innerHTML = acYmax;
-  document.getElementById("my_acg_z").innerHTML = acZmin;
-  document.getElementById("ZMAX").innerHTML = acZmax;
-  document.getElementById("step").innerHTML = stepCount;
-  SendDeviceInfo();
 }
 
 function deviceOrientation(e) {
@@ -282,6 +282,8 @@ function SendDeviceInfo() {
         data: {
           deviceMotionData,
           deviceOrientationData,
+          stepCount,
+          username,
         },
         from: IAM.token,
       })
@@ -316,6 +318,7 @@ g_socket.on("token", (data) => {
 // ・サーバー側のメッセージ拡散時の「io.broadcast.emit( "signaling", objData );」に対する処理
 g_socket.on("signaling", (objData) => {
   console.log("Socket Event : signaling");
+  console.log(objData);
   console.log("- type : ", objData.type);
   console.log("- data : ", objData.data);
   console.log("- device: ", objData.device);
@@ -324,7 +327,7 @@ g_socket.on("signaling", (objData) => {
   let strRemoteSocketID = objData.from;
   console.log("- from : ", objData.from);
 
-  if (!g_elementTextUserName.value) {
+  if (device() !== "desktop" && !g_elementTextUserName.value) {
     // 自身がまだ参加していないときは、"signaling"イベントを無視。
     console.log("Ignore 'signaling' event because I haven't join yet.");
     return;
@@ -378,6 +381,7 @@ g_socket.on("signaling", (objData) => {
     //g_elementTextRemoteUserName.value = objData.username;
     // リモート情報表示用のHTML要素の追加
     if (device() === "desktop" && objData.device !== "desktop") {
+      console("appendRemoteInfoElement");
       appendRemoteInfoElement(strRemoteSocketID, objData.username);
     }
   } else if ("answer" === objData.type) {
@@ -431,7 +435,10 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
     let objData = JSON.parse(event.data);
 
     if ("message" === objData.type) {
+      console.log("message");
+      console.log(objData);
       // 受信メッセージをメッセージテキストエリアへ追加
+      let stepCount = objData.data.stepCount;
       let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
       let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
       let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
@@ -443,8 +450,14 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
         Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
 
       let element = getRemoteChatElement(objData.from);
-      element.innerHTML = `加速度 X方向: ${acg_x}, Y方向: ${acg_y}, Z方向: ${acg_z}, 
-        GAMMA: ${gamma}, BETA: ${beta}, ALPHA: ${alpha}`;
+      element.innerHTML = `歩数 ${stepCount}`;
+      // ここで歩数を更新する
+      let temp = labelData.find((v) => v.y === objData.data.username);
+      temp.step = stepCount;
+      // labelData.push({ y: objData.data.username, step: stepCount });
+      console.log("labelData =");
+      console.log(labelData);
+      chart.update();
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
       console.log("Call : setOfferSDP_and_createAnswerSDP()");
@@ -724,36 +737,36 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
 
   // IDの作成
   let strElementTextID = "text_" + strRemoteSocketID;
-  let strElementVideoID = "video_" + strRemoteSocketID;
-  let strElementAudioID = "audio_" + strRemoteSocketID;
+  // let strElementVideoID = "video_" + strRemoteSocketID;
+  // let strElementAudioID = "audio_" + strRemoteSocketID;
   let strElementTableID = "table_" + strRemoteSocketID;
   let strElementChatID = "chat_" + strRemoteSocketID;
 
-  // text HTML要素の作成
+  // // text HTML要素の作成
   let elementText = document.createElement("input");
   elementText.id = strElementTextID;
   elementText.type = "text";
   elementText.readOnly = "readonly";
   elementText.value = strUserName;
 
-  // video HTML要素の作成
-  let elementVideo = document.createElement("video");
-  elementVideo.id = strElementVideoID;
-  elementVideo.width = "0";
-  elementVideo.height = "0";
-  elementVideo.style.border = "1px solid black";
-  elementVideo.autoplay = true;
+  // // video HTML要素の作成
+  // let elementVideo = document.createElement("video");
+  // elementVideo.id = strElementVideoID;
+  // elementVideo.width = "0";
+  // elementVideo.height = "0";
+  // elementVideo.style.border = "1px solid black";
+  // elementVideo.autoplay = true;
 
-  // audio HTML要素の作成
-  let elementAudio = document.createElement("audio");
-  elementAudio.id = strElementAudioID;
-  elementAudio.autoplay = true;
+  // // audio HTML要素の作成
+  // let elementAudio = document.createElement("audio");
+  // elementAudio.id = strElementAudioID;
+  // elementAudio.autoplay = true;
 
   // チャット表示
   let elementChat = document.createElement("textarea");
   elementChat.id = strElementChatID;
   elementChat.cols = "40";
-  elementChat.rows = "10";
+  elementChat.rows = "2";
   elementChat.readOnly = true;
 
   // div HTML要素の作成
@@ -764,10 +777,15 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   // 要素の配置
   elementDiv.appendChild(elementText); // ユーザー名
   elementDiv.appendChild(document.createElement("br")); // 改行
-  elementDiv.appendChild(elementVideo); // Video
-  elementDiv.appendChild(elementAudio); // Audio
+  // elementDiv.appendChild(elementVideo); // Video
+  // elementDiv.appendChild(elementAudio); // Audio
   elementDiv.appendChild(elementChat); // チャット
   g_tmp.appendChild(elementDiv);
+
+  labelData.push({ y: strUserName, step: 0 });
+  console.log("labelData =");
+  console.log(labelData);
+  chart.update();
 }
 
 // リモート映像表示用のHTML要素の取得
@@ -804,3 +822,32 @@ function removeRemoteInfoElement(strRemoteSocketID) {
   }
   g_tmp.removeChild(elementTable);
 }
+
+var ctx = document.getElementById("myChart").getContext("2d");
+var canvas = document.getElementById("myChart");
+const cfg = {
+  type: "bar",
+  data: {
+    datasets: [
+      {
+        label: "Steps",
+        data: labelData,
+        parsing: {
+          xAxisKey: "step",
+        },
+      },
+    ],
+  },
+  options: {
+    indexAxis: "y",
+    layout: {
+      padding: {
+        left: 0,
+        right: 0,
+      },
+    },
+  },
+};
+Chart.defaults.font.size = 25;
+Chart.defaults.font.family = "brandon-grotesque, sans-serif";
+var chart = new Chart(ctx, cfg);

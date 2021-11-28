@@ -154,6 +154,32 @@ input[type="submit"] {
   color: white;
 }
 
+#desktop {
+  display: flex;
+  flex-direction: column;
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+#sample {
+  display: flex;
+  flex-direction: row;
+}
+
+#step {
+  width: 70%;
+  /* height: 40%; */
+}
+
+#user_name {
+  display: flex;
+  flex-direction: column;
+}
+/* #myChart {
+  width: 100px;
+  height: 80%;
+} */
+
 .parallax1 > use {
   animation: move-forever1 10s linear infinite;
   &:nth-child(1) {

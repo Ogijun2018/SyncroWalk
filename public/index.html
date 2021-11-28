@@ -66,9 +66,18 @@
   <div id="desktop" style="display: none;">
     <h1>SyncroWalk</h1>
     <div id="tmp"></div>
+    <div id="sample">
+      <div id="step">
+        <canvas id="myChart"></canvas>
+      </div>
+    </div>
   </div>
     <!-- Script -->
     <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@3.6.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="./client.js"></script>
 </body>
