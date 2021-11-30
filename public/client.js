@@ -296,7 +296,7 @@ function stopSendData() {
     if (isDataChannelOpen(rtcPeerConnection)) {
       // 離脱の通知をDataChannelを通して相手に直接送信
       rtcPeerConnection.datachannel.send(
-        JSON.stringify({ type: "leave", data: "" })
+        JSON.stringify({ type: "leave", data: username })
       );
     }
     endPeerConnection(rtcPeerConnection);
@@ -350,6 +350,7 @@ g_socket.on("signaling", (objData) => {
     // DataChannelの作成
     let datachannel = rtcPeerConnection.createDataChannel("datachannel");
     // DataChannelオブジェクトをRTCPeerConnectionオブジェクトのメンバーに追加。
+    console.log("dataChannel = ", datachannel);
     rtcPeerConnection.datachannel = datachannel;
     // DataChannelオブジェクトのイベントハンドラの構築
     console.log("Call : setupDataChannelEventHandler()");
@@ -450,13 +451,10 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
         Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
 
       let element = getRemoteChatElement(objData.from);
-      element.innerHTML = `歩数 ${stepCount}`;
+      // element.innerHTML = `歩数 ${stepCount}`;
       // ここで歩数を更新する
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
-      // labelData.push({ y: objData.data.username, step: stepCount });
-      console.log("labelData =");
-      console.log(labelData);
       chart.update();
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
@@ -472,6 +470,12 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
       addCandidate(rtcPeerConnection, objData.data);
     } else if ("leave" === objData.type) {
       console.log("Call : endPeerConnection()");
+      let num = labelData.findIndex((v) => v.y === objData.data);
+      chart.data.labels.splice(num, 1);
+      chart.data.datasets.forEach((dataset) => {
+        dataset.data.splice(num, 1);
+      });
+      chart.update();
       endPeerConnection(rtcPeerConnection);
     }
   };
@@ -775,16 +779,14 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   elementDiv.border = "1px solid black";
 
   // 要素の配置
-  elementDiv.appendChild(elementText); // ユーザー名
-  elementDiv.appendChild(document.createElement("br")); // 改行
-  // elementDiv.appendChild(elementVideo); // Video
-  // elementDiv.appendChild(elementAudio); // Audio
-  elementDiv.appendChild(elementChat); // チャット
-  g_tmp.appendChild(elementDiv);
+  // elementDiv.appendChild(elementText); // ユーザー名
+  // elementDiv.appendChild(document.createElement("br")); // 改行
+  // // elementDiv.appendChild(elementVideo); // Video
+  // // elementDiv.appendChild(elementAudio); // Audio
+  // elementDiv.appendChild(elementChat); // チャット
+  // g_tmp.appendChild(elementDiv);
 
   labelData.push({ y: strUserName, step: 0 });
-  console.log("labelData =");
-  console.log(labelData);
   chart.update();
 }
 
@@ -839,11 +841,17 @@ const cfg = {
     ],
   },
   options: {
+    responsive: true,
     indexAxis: "y",
     layout: {
       padding: {
         left: 0,
         right: 0,
+      },
+    },
+    scales: {
+      x: {
+        suggestedMax: 20,
       },
     },
   },
