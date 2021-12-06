@@ -4,6 +4,7 @@ const g_elementDivJoinScreen = document.getElementById("div_join_screen");
 const g_elementDivChatScreen = document.getElementById("div_chat_screen");
 const g_elementInputUserName = document.getElementById("input_username");
 const join_alert = document.getElementById("alert");
+const sum_momentum = document.getElementById("sum");
 
 const g_elementDivUserInfo = document.getElementById("div_userinfo");
 const g_tmp = document.getElementById("tmp");
@@ -13,8 +14,6 @@ const desktopScreen = document.getElementById("desktop");
 
 let filterData = { x: 0, y: 0, z: 0 };
 let axis_result = { x: 0, y: 0, z: 0 };
-let axis_new = { x: 0, y: 0, z: 0 };
-let axis_old = { x: 0, y: 0, z: 0 };
 let deviceMotionData = { x: 0, y: 0, z: 0 };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 let username = "";
@@ -22,25 +21,9 @@ let labelData = [];
 
 let g_mapRtcPeerConnection = new Map();
 
-// 動的しきい値のサンプル数
-const THRESHOLD = 50;
 let stepCount = 0;
-let sampleCount = 0;
 let filterCount = 0;
-
-// make the maximum register min and minimum register max
-// so that they can be updated at the next cycle immediately
-let acXmin,
-  acYmin,
-  acZmin = 100;
-let acXmax,
-  acYmax,
-  acZmax = -100;
-
-let dcX, dcY, dcZ;
-
-// 加速度変化の最も大きい軸
-let thresholdLevel = 0;
+let allCount = 0;
 
 // クライアントからサーバーへの接続要求
 const g_socket = io.connect();
@@ -94,7 +77,6 @@ function onsubmitButton_Join() {
 function deviceMotion(e) {
   e.preventDefault();
   let ac = e.acceleration;
-  let acg = e.accelerationIncludingGravity;
 
   if (filterCount < 3) {
     // save the last 3-axis samples to the shift registers
@@ -114,29 +96,6 @@ function deviceMotion(e) {
     filterData = { x: 0, y: 0, z: 0 };
   }
 
-  // find 3-axis max value and min value
-  acXmin = Math.min(axis_result.x, acXmin);
-  acYmin = Math.min(axis_result.y, acYmin);
-  acZmin = Math.min(axis_result.z, acZmin);
-  acXmax = Math.max(axis_result.x, acXmax);
-  acYmax = Math.max(axis_result.y, acYmax);
-  acZmax = Math.max(axis_result.z, acZmax);
-
-  sampleCount++;
-
-  if (sampleCount > THRESHOLD) {
-    sampleCount = 0;
-    // compute peak-to-peak value and dc value for each axis
-    dcX = (acXmax - acXmin) / 2;
-    dcY = (acYmax - acYmin) / 2;
-    dcZ = (acZmax - acZmin) / 2;
-    // reinitate the values of the max and min for comparing
-    acXmax = acYmax = acZmax = -100;
-    acXmin = acYmin = acZmin = 100;
-    // based on the Vp-p, set the dynamic precision
-    // these values are determined by customer
-  }
-
   let resultVector = Math.sqrt(
     Math.pow(axis_result.x, 2) +
       Math.pow(axis_result.y, 2) +
@@ -144,61 +103,17 @@ function deviceMotion(e) {
   );
 
   // 動的精度はとりあえず1.0の固定値
-  if (resultVector > 1.0) {
-    axis_old = { x: axis_new.x, y: axis_new.y, z: axis_new.z };
-    axis_new = { x: axis_result.x, y: axis_result.y, z: axis_result.z };
+  if (resultVector > 4.0) {
+    stepCount++;
+    allCount++;
+    sum_momentum.innerHTML = allCount;
+    SendDeviceInfo();
   } else {
-    axis_old = { x: axis_new.x, y: axis_new.y, z: axis_new.z };
     return;
   }
-
-  // find the axis whose acceleration change is the largest
-  let abs_x_change = Math.abs(axis_result.x);
-  let abs_y_change = Math.abs(axis_result.y);
-  let abs_z_change = Math.abs(axis_result.z);
-  if (abs_x_change > abs_y_change && abs_x_change > abs_z_change) {
-    thresholdLevel = dcX;
-    if (axis_old.x > thresholdLevel && thresholdLevel > axis_new.x) {
-      stepCount++;
-      document.getElementById("step").innerHTML = stepCount;
-      console.log("stepCount up");
-      SendDeviceInfo();
-    }
-  } else if (abs_y_change > abs_x_change && abs_y_change > abs_z_change) {
-    thresholdLevel = dcY;
-    if (axis_old.y > thresholdLevel && thresholdLevel > axis_new.y) {
-      stepCount++;
-      document.getElementById("step").innerHTML = stepCount;
-      console.log("stepCount up");
-      SendDeviceInfo();
-    }
-  } else if (abs_z_change > abs_x_change && abs_z_change > abs_y_change) {
-    thresholdLevel = dcZ;
-    if (axis_old.z > thresholdLevel && thresholdLevel > axis_new.z) {
-      stepCount++;
-      document.getElementById("step").innerHTML = stepCount;
-      console.log("stepCount up");
-      SendDeviceInfo();
-    }
-  }
-
-  deviceMotionData.x = ac.x;
-  deviceMotionData.y = ac.y;
-  deviceMotionData.z = ac.z;
 }
 
-function deviceOrientation(e) {
-  e.preventDefault();
-  let gamma = e.gamma; // Left/Right
-  let beta = e.beta; // Front/Back
-  let alpha = e.alpha; // Direction
-  deviceOrientationData.gamma = gamma;
-  deviceOrientationData.beta = beta;
-  deviceOrientationData.alpha = alpha;
-  // document.getElementById("my_gamma").innerHTML = Math.round(gamma * 10) / 10;
-  // document.getElementById("my_beta").innerHTML = Math.round(beta * 10) / 10;
-  // document.getElementById("my_alpha").innerHTML = Math.round(alpha * 10) / 10;
-}
+function deviceOrientation(e) {}
 
 function ClickRequestDeviceSensor() {
   //. ユーザーに「許可」を明示させる必要がある
@@ -261,18 +176,10 @@ window.addEventListener("beforeunload", (event) => {
 });
 
 function SendDeviceInfo() {
-  console.log("Send Device Info");
-
   if (!g_mapRtcPeerConnection.size) {
-    // コネクションオブジェクトがない
-    // alert("Connection object does not exist!!!");
+    alert("Connection object does not exist!!!");
     return;
   }
-  //if( !isDataChannelOpen( g_rtcPeerConnection ) )
-  //{   // DataChannelオブジェクトが開いていない
-  //    alert( "Datachannel is not open." );
-  //    return;
-  //}
   // メッセージをDataChannelを通して相手に直接送信
   g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
     console.log("- Send Message through DataChannel");
@@ -280,8 +187,6 @@ function SendDeviceInfo() {
       JSON.stringify({
         type: "message",
         data: {
-          deviceMotionData,
-          deviceOrientationData,
           stepCount,
           username,
         },
@@ -436,23 +341,11 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
     let objData = JSON.parse(event.data);
 
     if ("message" === objData.type) {
-      console.log("message");
-      console.log(objData);
       // 受信メッセージをメッセージテキストエリアへ追加
       let stepCount = objData.data.stepCount;
-      let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
-      let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
-      let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
-      let gamma =
-        Math.round(objData.data.deviceOrientationData.gamma * 100) / 100;
-      let beta =
-        Math.round(objData.data.deviceOrientationData.beta * 100) / 100;
-      let alpha =
-        Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
-
-      let element = getRemoteChatElement(objData.from);
-      // element.innerHTML = `歩数 ${stepCount}`;
-      // ここで歩数を更新する
+      allCount++;
+      sum_momentum.innerHTML = allCount;
+      // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
       chart.update();
@@ -737,12 +630,8 @@ function addCandidate(rtcPeerConnection, candidate) {
 
 // リモート情報表示用のHTML要素の追加
 function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
-  // <div border="1 solid #000000"><input type="text" id="text_remote_username" readonly="readonly"><br /><video id="video_remote" width="320" height="240" style="border: 1px solid black;"></video><audio id="audio_remote"></audio></div>
-
   // IDの作成
   let strElementTextID = "text_" + strRemoteSocketID;
-  // let strElementVideoID = "video_" + strRemoteSocketID;
-  // let strElementAudioID = "audio_" + strRemoteSocketID;
   let strElementTableID = "table_" + strRemoteSocketID;
   let strElementChatID = "chat_" + strRemoteSocketID;
 
@@ -752,19 +641,6 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   elementText.type = "text";
   elementText.readOnly = "readonly";
   elementText.value = strUserName;
-
-  // // video HTML要素の作成
-  // let elementVideo = document.createElement("video");
-  // elementVideo.id = strElementVideoID;
-  // elementVideo.width = "0";
-  // elementVideo.height = "0";
-  // elementVideo.style.border = "1px solid black";
-  // elementVideo.autoplay = true;
-
-  // // audio HTML要素の作成
-  // let elementAudio = document.createElement("audio");
-  // elementAudio.id = strElementAudioID;
-  // elementAudio.autoplay = true;
 
   // チャット表示
   let elementChat = document.createElement("textarea");
@@ -777,14 +653,6 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   let elementDiv = document.createElement("div");
   elementDiv.id = strElementTableID;
   elementDiv.border = "1px solid black";
-
-  // 要素の配置
-  // elementDiv.appendChild(elementText); // ユーザー名
-  // elementDiv.appendChild(document.createElement("br")); // 改行
-  // // elementDiv.appendChild(elementVideo); // Video
-  // // elementDiv.appendChild(elementAudio); // Audio
-  // elementDiv.appendChild(elementChat); // チャット
-  // g_tmp.appendChild(elementDiv);
 
   labelData.push({ y: strUserName, step: 0 });
   chart.update();
