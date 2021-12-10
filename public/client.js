@@ -5,6 +5,7 @@ const g_elementDivChatScreen = document.getElementById("div_chat_screen");
 const g_elementInputUserName = document.getElementById("input_username");
 const join_alert = document.getElementById("alert");
 const sum_momentum = document.getElementById("sum");
+const word = document.getElementById("word");
 
 const g_elementDivUserInfo = document.getElementById("div_userinfo");
 const g_tmp = document.getElementById("tmp");
@@ -25,12 +26,30 @@ let stepCount = 0;
 let filterCount = 0;
 let allCount = 0;
 
+const dict = [
+  "学生",
+  "乗り物",
+  "ゲーム",
+  "転がす",
+  "吹雪",
+  "着る",
+  "スマートフォン",
+  "映画館",
+  "カレンダー",
+];
+
 // クライアントからサーバーへの接続要求
 const g_socket = io.connect();
 
 const IAM = {
   token: null,
 };
+
+function logCount() {
+  console.log("logCount: ", allCount);
+}
+
+setInterval(logCount, 1000);
 
 function device() {
   var ua = navigator.userAgent;
@@ -78,7 +97,7 @@ function deviceMotion(e) {
   e.preventDefault();
   let ac = e.acceleration;
 
-  if (filterCount < 3) {
+  if (filterCount < 5) {
     // save the last 3-axis samples to the shift registers
     // for sum filtering
     filterCount++;
@@ -89,9 +108,9 @@ function deviceMotion(e) {
   } else {
     filterCount = 0;
     axis_result = {
-      x: filterData.x / 4,
-      y: filterData.y / 4,
-      z: filterData.z / 4,
+      x: filterData.x / 5,
+      y: filterData.y / 5,
+      z: filterData.z / 5,
     };
     filterData = { x: 0, y: 0, z: 0 };
   }
@@ -345,6 +364,7 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
       let stepCount = objData.data.stepCount;
       allCount++;
       sum_momentum.innerHTML = allCount;
+      word.innerHTML = dict[Math.floor(allCount / 100)];
       // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;

@@ -180,6 +180,20 @@ input[type="submit"] {
   height: 80%;
 } */
 
+#infoContainer {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+#sumContainer {
+  font-size: 50px;
+}
+
+#wordContainer {
+  font-size: 100px;
+}
+
 .parallax1 > use {
   animation: move-forever1 10s linear infinite;
   &:nth-child(1) {
