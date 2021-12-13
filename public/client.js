@@ -19,6 +19,12 @@ let deviceMotionData = { x: 0, y: 0, z: 0 };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 let username = "";
 let labelData = [];
+let labelDataName = [];
+let labelDataStep = [];
+
+// 単語が変更されるまでの秒数（ms）
+let THRESHOLD = 500;
+let changeCount = 0;
 
 let g_mapRtcPeerConnection = new Map();
 
@@ -44,12 +50,6 @@ const g_socket = io.connect();
 const IAM = {
   token: null,
 };
-
-function logCount() {
-  console.log("logCount: ", allCount);
-}
-
-setInterval(logCount, 1000);
 
 function device() {
   var ua = navigator.userAgent;
@@ -363,12 +363,20 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
       // 受信メッセージをメッセージテキストエリアへ追加
       let stepCount = objData.data.stepCount;
       allCount++;
+      if (allCount > THRESHOLD) {
+        changeCount++;
+        allCount = 0;
+      }
       sum_momentum.innerHTML = allCount;
-      word.innerHTML = dict[Math.floor(allCount / 100)];
+      word.innerHTML = dict[changeCount];
       // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
-      chart.update();
+      labelDataStep = labelData.map((x) => x.step % THRESHOLD);
+      labelDataStep.push(THRESHOLD - allCount);
+      chart2.data.datasets[0].data = labelDataStep;
+      // chart.update();
+      chart2.update();
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
       console.log("Call : setOfferSDP_and_createAnswerSDP()");
@@ -384,11 +392,12 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
     } else if ("leave" === objData.type) {
       console.log("Call : endPeerConnection()");
       let num = labelData.findIndex((v) => v.y === objData.data);
-      chart.data.labels.splice(num, 1);
-      chart.data.datasets.forEach((dataset) => {
-        dataset.data.splice(num, 1);
-      });
-      chart.update();
+      // chart.data.labels.splice(num, 1);
+      // chart.data.datasets.forEach((dataset) => {
+      //   dataset.data.splice(num, 1);
+      // });
+      // chart.update();
+      chart2.update();
       endPeerConnection(rtcPeerConnection);
     }
   };
@@ -675,7 +684,9 @@ function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
   elementDiv.border = "1px solid black";
 
   labelData.push({ y: strUserName, step: 0 });
-  chart.update();
+  chart2.data.labels.push(strUserName);
+  // chart.update();
+  chart2.update();
 }
 
 // リモート映像表示用のHTML要素の取得
@@ -713,37 +724,74 @@ function removeRemoteInfoElement(strRemoteSocketID) {
   g_tmp.removeChild(elementTable);
 }
 
-var ctx = document.getElementById("myChart").getContext("2d");
-var canvas = document.getElementById("myChart");
-const cfg = {
-  type: "bar",
+// var ctx = document.getElementById("myChart").getContext("2d");
+// var canvas = document.getElementById("myChart");
+var ctx2 = document.getElementById("myChart2").getContext("2d");
+var canvas2 = document.getElementById("myChart2");
+// const cfg = {
+//   type: "bar",
+//   data: {
+//     datasets: [
+//       {
+//         label: "Steps",
+//         data: labelData,
+//         parsing: {
+//           xAxisKey: "step",
+//         },
+//       },
+//     ],
+//   },
+//   options: {
+//     responsive: true,
+//     indexAxis: "y",
+//     layout: {
+//       padding: {
+//         left: 0,
+//         right: 0,
+//       },
+//     },
+//     scales: {
+//       x: {
+//         suggestedMax: 20,
+//       },
+//     },
+//   },
+// };
+// Chart.defaults.font.size = 25;
+// Chart.defaults.font.family = "brandon-grotesque, sans-serif";
+// var chart = new Chart(ctx, cfg);
+
+const cfg2 = {
+  type: "doughnut",
   data: {
     datasets: [
       {
-        label: "Steps",
-        data: labelData,
-        parsing: {
-          xAxisKey: "step",
-        },
+        label: "Point",
+        backgroundColor: [
+          "rgb(255, 99, 132)",
+          "rgb(54, 162, 235)",
+          "rgb(255, 205, 86)",
+          "rgb(75, 192, 192)",
+          "rgba(0,0,0,0)",
+        ],
+        // data: labelDataStep,
+        data: [10, 10, 10, 10],
       },
     ],
   },
   options: {
     responsive: true,
-    indexAxis: "y",
-    layout: {
-      padding: {
-        left: 0,
-        right: 0,
+    plugins: {
+      legend: {
+        position: "top",
       },
-    },
-    scales: {
-      x: {
-        suggestedMax: 20,
+      title: {
+        display: false,
+        text: "Chart.js Doughnut Chart",
       },
     },
   },
 };
 Chart.defaults.font.size = 25;
 Chart.defaults.font.family = "brandon-grotesque, sans-serif";
-var chart = new Chart(ctx, cfg);
+var chart2 = new Chart(ctx2, cfg2);
