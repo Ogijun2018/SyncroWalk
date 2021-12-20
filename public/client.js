@@ -42,6 +42,7 @@ const dict = [
   "スマートフォン",
   "映画館",
   "カレンダー",
+  "パソコン",
 ];
 
 // クライアントからサーバーへの接続要求
@@ -368,7 +369,7 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
         allCount = 0;
       }
       sum_momentum.innerHTML = allCount;
-      word.innerHTML = dict[changeCount];
+      word.innerHTML = dict[changeCount % 10];
       // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
