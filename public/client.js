@@ -20,9 +20,14 @@ let username = "";
 let labelData = [];
 let labelDataStep = [];
 let labelDataStepTemp = [0, 0, 0, 0];
+// 一つのしりとりが終了するまでに各自が運動した時間
+let exportData_word = [];
+// 1分ごとに運動した時間
+let exportData_min = [];
+let startFlag = false;
 
 // 単語が変更されるまでの秒数（ms）
-let THRESHOLD = 100;
+let THRESHOLD = 100 - 1;
 let changeCount = 0;
 
 // 元の単語: ハンガー: 0, 鉛筆: 1, 樽: 2, 靴: 3
@@ -78,6 +83,63 @@ if (device() === "mobile") {
   smartphoneScreen.style.display = "flex";
 } else if (device() === "desktop") {
   desktopScreen.style.display = "flex";
+}
+
+function startExperiment() {
+  startFlag = true;
+  for (let i = 0; i < labelDataStepTemp.length; i++) {
+    labelDataStepTemp[i] = labelDataStep[i];
+  }
+  allCount = 0;
+  let sample = [0, 0, 0, 0];
+  for (let i = 0; i < sample.length; i++) {
+    sample[i] = labelDataStep[i] - labelDataStepTemp[i];
+  }
+  sample.push(THRESHOLD - allCount);
+  chart.data.datasets[0].data = sample;
+  chart.update();
+  exportData_min.push(labelDataStep.slice());
+  document.getElementById("startButton").disabled = true;
+
+  const log = function () {
+    let sample = labelDataStep.slice();
+    for (let i = 0; i < sample.length; i++) {
+      sample[i] -= exportData_min[0][i];
+    }
+    exportData_min.push(sample.slice());
+    console.log("6秒ごとのデータ");
+    console.log(exportData_min);
+  };
+  // 60sごとに運動時間を取得
+  setInterval(log, 60000);
+  // setInterval(log, 6000);
+}
+
+// 配列をcsvで保存するfunction
+function exportData() {
+  let csvContent = "data:text/csv;charset=utf-8,";
+  exportData_word.forEach(function (rowArray) {
+    let row = rowArray.join(",");
+    csvContent += row + "\r\n";
+  });
+  var encodedUri = encodeURI(csvContent);
+  var link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "Data_word.csv");
+  document.body.appendChild(link);
+  link.click();
+
+  csvContent = "data:text/csv;charset=utf-8,";
+  exportData_min.forEach(function (rowArray) {
+    let row = rowArray.join(",");
+    csvContent += row + "\r\n";
+  });
+  encodedUri = encodeURI(csvContent);
+  link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "Data_min.csv");
+  document.body.appendChild(link);
+  link.click();
 }
 
 function onsubmitButton_Join() {
@@ -372,12 +434,20 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
         for (let i = 0; i < labelDataStepTemp.length; i++) {
           labelDataStepTemp[i] = labelDataStep[i];
         }
-        console.log(labelDataStepTemp);
+        let sample2 = labelDataStepTemp.slice();
+        for (let i = 0; i < sample2.length; i++) {
+          sample2[i] -= exportData_min[0][i];
+        }
+        exportData_word.push(sample2.slice());
+        console.log("単語ごとのデータ");
+        console.log(exportData_word);
         changeCount++;
         allCount = 0;
       }
       sum_momentum.innerHTML = allCount;
-      word.innerHTML = result[changeCount][wordNum];
+      if (startFlag) {
+        word.innerHTML = result[changeCount][wordNum];
+      }
       // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;

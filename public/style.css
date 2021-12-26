@@ -185,6 +185,16 @@ input[type="submit"] {
   font-size: 50px;
 }
 
+#exportButton {
+  position: absolute;
+  margin-top: 20vh;
+}
+
+#startButton {
+  position: absolute;
+  margin-top: 25vh;
+}
+
 #wordContainer {
   position: absolute;
   /* justify-content: center; */

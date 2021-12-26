@@ -59,7 +59,11 @@
   <div id="desktop" style="display: none;">
     <h1>SyncroWalk</h1>
     <div id="wordContainer"><span id="word">Start</span></div>
-    <div id="sumContainer">ExPoint: <span id="sum"></span></div>
+    <div id="sumContainer">
+      ExPoint: <span id="sum"></span>
+    </div>
+    <button id="exportButton" type="button" onclick="exportData();">Download</button>
+    <button id="startButton" type="button" onclick="startExperiment();">測定開始</button>
     <div id="sample">
       <div id="step">
         <canvas id="chart"></canvas>
