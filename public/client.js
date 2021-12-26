@@ -27,7 +27,7 @@ let exportData_min = [];
 let startFlag = false;
 
 // 単語が変更されるまでの秒数（ms）
-let THRESHOLD = 100 - 1;
+let THRESHOLD = 2400 - 1;
 let changeCount = 0;
 
 // 元の単語: ハンガー: 0, 鉛筆: 1, 樽: 2, 靴: 3
