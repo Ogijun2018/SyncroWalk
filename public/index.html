@@ -59,12 +59,14 @@
   <div id="desktop" style="display: none;">
     <h1>SyncroWalk</h1>
     <div id="wordContainer"><span id="word">Start</span></div>
-    <div id="sumContainer">ExPoint: <span id="sum"></span></div>
-    <div id="sample">
+    <div id="sumContainer">
+      <button id="changeWordButton" type="button" onclick="changeWord();"> <img id="changeImg" src="./change.png" height ="80" width="80" style="border: 0px;" /></button>
+    </div>
+    <!-- <div id="sample">
       <div id="step">
         <canvas id="chart"></canvas>
       </div>
-    </div>
+    </div> -->
   </div>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@3.6.0/dist/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>

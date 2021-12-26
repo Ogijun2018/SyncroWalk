@@ -59,6 +59,17 @@ const IAM = {
   token: null,
 };
 
+function changeWord() {
+  document.getElementById("changeWordButton").disabled = true;
+  document.getElementById("changeImg").style = "opacity: 0.2;";
+  word.innerHTML = result[changeCount][wordNum];
+  changeCount++;
+  setTimeout(function () {
+    document.getElementById("changeWordButton").disabled = false;
+    document.getElementById("changeImg").style = "opacity: 1;";
+  }, 20000);
+}
+
 function device() {
   var ua = navigator.userAgent;
   if (
