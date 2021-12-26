@@ -19,9 +19,10 @@ let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 let username = "";
 let labelData = [];
 let labelDataStep = [];
+let labelDataStepTemp = [0, 0, 0, 0];
 
 // 単語が変更されるまでの秒数（ms）
-let THRESHOLD = 500;
+let THRESHOLD = 100;
 let changeCount = 0;
 
 // 元の単語: ハンガー: 0, 鉛筆: 1, 樽: 2, 靴: 3
@@ -52,7 +53,7 @@ function convertCSVtoArray(str) {
   }
 }
 
-getCSV();
+// getCSV();
 const g_socket = io.connect();
 const IAM = {
   token: null,
@@ -190,15 +191,6 @@ if (window.DeviceMotionEvent) {
     window.addEventListener("devicemotion", deviceMotion);
   }
 }
-
-// window.addEventListener("beforeunload", (event) => {
-//   console.log("beforeUnload");
-//   event.preventDefault();
-//   stopSendData();
-//   g_socket.disconnect();
-//   e.returnValue = "";
-//   return "";
-// });
 
 window.addEventListener("pagehide", (event) => {
   event.preventDefault();
@@ -373,18 +365,29 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
       // 受信メッセージをメッセージテキストエリアへ追加
       let stepCount = objData.data.stepCount;
       allCount++;
+      labelDataStep = labelData.map((x) => x.step);
       if (allCount > THRESHOLD) {
+        // 全体の運動がTHRESHOLDを超えたら、そこまでの運動を記録して一度リセットする
+        console.log("ここまでの運動を保存");
+        for (let i = 0; i < labelDataStepTemp.length; i++) {
+          labelDataStepTemp[i] = labelDataStep[i];
+        }
+        console.log(labelDataStepTemp);
         changeCount++;
         allCount = 0;
       }
       sum_momentum.innerHTML = allCount;
-      word.innerHTML = result[changeCount][wordNum];
+      // word.innerHTML = result[changeCount][wordNum];
       // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
-      labelDataStep = labelData.map((x) => x.step % THRESHOLD);
-      labelDataStep.push(THRESHOLD - allCount);
-      chart.data.datasets[0].data = labelDataStep;
+
+      let sample = [0, 0, 0, 0];
+      for (let i = 0; i < sample.length; i++) {
+        sample[i] = labelDataStep[i] - labelDataStepTemp[i];
+      }
+      sample.push(THRESHOLD - allCount);
+      chart.data.datasets[0].data = sample;
       chart.update();
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
@@ -408,7 +411,6 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
       chart.data.datasets.forEach((dataset) => {
         dataset.data.splice(num, 1);
       });
-      console.log(chart.data.labels);
       chart.update();
       endPeerConnection(rtcPeerConnection);
     }
