@@ -53,7 +53,7 @@ function convertCSVtoArray(str) {
   }
 }
 
-// getCSV();
+getCSV();
 const g_socket = io.connect();
 const IAM = {
   token: null,
@@ -377,7 +377,7 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
         allCount = 0;
       }
       sum_momentum.innerHTML = allCount;
-      // word.innerHTML = result[changeCount][wordNum];
+      word.innerHTML = result[changeCount][wordNum];
       // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
