@@ -40,6 +40,7 @@
   <div id="smartphone" style="display: none;">
     <h1 id="hero">SyncroWalk</h1>
     <div id="div_join_screen">
+      <div id="sensorrequest" onclick="ClickRequestDeviceSensor();"><p id="sensoricon">>></p></div>
       <!-- エンターキーによるボタン押下を行うために、<button>ではなく<form>と<input type="submit">を使用。
       ボタン押下(=submit)時にページリロードが行われないように、onsubmitの設定の最後に"return false;"を追加 -->
       <form id="user_form" action="" onsubmit="onsubmitButton_Join(); return false;">
@@ -61,13 +62,10 @@
     <div id="sumContainer">ExPoint: <span id="sum"></span></div>
     <div id="sample">
       <div id="step">
-        <!-- <canvas id="myChart"></canvas> -->
-        <canvas id="myChart2"></canvas>
+        <canvas id="chart"></canvas>
       </div>
     </div>
   </div>
-    <!-- Script -->
-    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@3.6.0/dist/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>

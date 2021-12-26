@@ -8,7 +8,6 @@ const sum_momentum = document.getElementById("sum");
 const word = document.getElementById("word");
 
 const g_elementDivUserInfo = document.getElementById("div_userinfo");
-const g_tmp = document.getElementById("tmp");
 const g_elementTextUserName = document.getElementById("text_username");
 const smartphoneScreen = document.getElementById("smartphone");
 const desktopScreen = document.getElementById("desktop");
@@ -19,12 +18,14 @@ let deviceMotionData = { x: 0, y: 0, z: 0 };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 let username = "";
 let labelData = [];
-let labelDataName = [];
 let labelDataStep = [];
 
 // 単語が変更されるまでの秒数（ms）
 let THRESHOLD = 500;
 let changeCount = 0;
+
+// 元の単語: ハンガー: 0, 鉛筆: 1, 樽: 2, 靴: 3
+let wordNum = 0;
 
 let g_mapRtcPeerConnection = new Map();
 
@@ -32,22 +33,27 @@ let stepCount = 0;
 let filterCount = 0;
 let allCount = 0;
 
-const dict = [
-  "学生",
-  "乗り物",
-  "ゲーム",
-  "転がす",
-  "吹雪",
-  "着る",
-  "スマートフォン",
-  "映画館",
-  "カレンダー",
-  "パソコン",
-];
+var result = [];
 
-// クライアントからサーバーへの接続要求
+function getCSV() {
+  var req = new XMLHttpRequest();
+  req.open("get", "shiritori.csv", true);
+  req.send(null);
+
+  req.onload = function () {
+    convertCSVtoArray(req.responseText);
+  };
+}
+
+function convertCSVtoArray(str) {
+  var tmp = str.split("\n");
+  for (var i = 0; i < tmp.length; ++i) {
+    result[i] = tmp[i].split(",");
+  }
+}
+
+getCSV();
 const g_socket = io.connect();
-
 const IAM = {
   token: null,
 };
@@ -141,7 +147,7 @@ function ClickRequestDeviceSensor() {
     .then(function (response) {
       if (response === "granted") {
         window.addEventListener("deviceorientation", deviceOrientation);
-        $("#sensorrequest").css("display", "none");
+        document.getElementById("sensorrequest").style.display = "none";
       }
     })
     .catch(function (e) {
@@ -152,7 +158,7 @@ function ClickRequestDeviceSensor() {
     .then(function (response) {
       if (response === "granted") {
         window.addEventListener("devicemotion", deviceMotion);
-        $("#sensorrequest").css("display", "none");
+        document.getElementById("sensorrequest").style.display = "none";
       }
     })
     .catch(function (e) {
@@ -168,11 +174,9 @@ if (window.DeviceOrientationEvent) {
     DeviceOrientationEvent.requestPermission &&
     typeof DeviceOrientationEvent.requestPermission === "function"
   ) {
-    $("#div_chat_screen").css("display", "none");
-    var banner =
-      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();"><p id="sensoricon">>></p></div>';
-    $("#div_join_screen").prepend(banner);
+    document.getElementById("div_chat_screen").style.display = "none";
   } else {
+    document.getElementById("sensorrequest").style.display = "none";
     window.addEventListener("deviceorientation", deviceOrientation);
   }
 }
@@ -187,17 +191,28 @@ if (window.DeviceMotionEvent) {
   }
 }
 
-window.addEventListener("beforeunload", (event) => {
+// window.addEventListener("beforeunload", (event) => {
+//   console.log("beforeUnload");
+//   event.preventDefault();
+//   stopSendData();
+//   g_socket.disconnect();
+//   e.returnValue = "";
+//   return "";
+// });
+
+window.addEventListener("pagehide", (event) => {
   event.preventDefault();
-  stopSendData(); // チャットからの離脱
-  g_socket.disconnect(); // Socket.ioによるサーバーとの接続の切断
-  e.returnValue = ""; // Chrome では returnValue を設定する必要がある
-  return ""; // Chrome 以外では、return を設定する必要がある
+  stopSendData();
+  g_socket.disconnect();
+  e.returnValue = "";
+  return "";
 });
 
 function SendDeviceInfo() {
   if (!g_mapRtcPeerConnection.size) {
-    alert("Connection object does not exist!!!");
+    alert(
+      "「閉じる」を押したあとブラウザを更新して再度名前を入力してください。"
+    );
     return;
   }
   // メッセージをDataChannelを通して相手に直接送信
@@ -226,7 +241,6 @@ function stopSendData() {
     }
     endPeerConnection(rtcPeerConnection);
   });
-  // g_elementTextUserName.value = "";
 }
 
 // 接続時の処理
@@ -303,12 +317,9 @@ g_socket.on("signaling", (objData) => {
     console.log("Call : setOfferSDP_and_createAnswerSDP()");
     setOfferSDP_and_createAnswerSDP(rtcPeerConnection, objData.data); // 受信したSDPオブジェクトを渡す。
 
-    // リモートユーザー名の設定
-    //g_elementTextRemoteUserName.value = objData.username;
-    // リモート情報表示用のHTML要素の追加
+    // 送信元: スマートフォン, 送信先: デスクトップのとき
     if (device() === "desktop" && objData.device !== "desktop") {
-      console("appendRemoteInfoElement");
-      appendRemoteInfoElement(strRemoteSocketID, objData.username);
+      appendRemoteInfoElement(objData.username);
     }
   } else if ("answer" === objData.type) {
     // onclickButton_SetAnswerSDPthenChatStarts()と同様の処理
@@ -326,11 +337,9 @@ g_socket.on("signaling", (objData) => {
     console.log("Call : setAnswerSDP()");
     setAnswerSDP(rtcPeerConnection, objData.data); // 受信したSDPオブジェクトを渡す。
 
-    // リモートユーザー名の設定
-    //g_elementTextRemoteUserName.value = objData.username;
-    // リモート情報表示用のHTML要素の追加
+    // 送信元: スマートフォン, 送信先: デスクトップのとき
     if (device() === "desktop" && objData.device !== "desktop") {
-      appendRemoteInfoElement(strRemoteSocketID, objData.username);
+      appendRemoteInfoElement(objData.username);
     }
   } else if ("candidate" === objData.type) {
     let rtcPeerConnection = g_mapRtcPeerConnection.get(strRemoteSocketID);
@@ -369,15 +378,14 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
         allCount = 0;
       }
       sum_momentum.innerHTML = allCount;
-      word.innerHTML = dict[changeCount % 10];
+      word.innerHTML = result[changeCount][wordNum];
       // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
       labelDataStep = labelData.map((x) => x.step % THRESHOLD);
       labelDataStep.push(THRESHOLD - allCount);
-      chart2.data.datasets[0].data = labelDataStep;
-      // chart.update();
-      chart2.update();
+      chart.data.datasets[0].data = labelDataStep;
+      chart.update();
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
       console.log("Call : setOfferSDP_and_createAnswerSDP()");
@@ -391,14 +399,17 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
       console.log("Call : addCandidate()");
       addCandidate(rtcPeerConnection, objData.data);
     } else if ("leave" === objData.type) {
+      // TODO: ユーザーが退出したときにユーザー情報を消す
       console.log("Call : endPeerConnection()");
       let num = labelData.findIndex((v) => v.y === objData.data);
-      // chart.data.labels.splice(num, 1);
-      // chart.data.datasets.forEach((dataset) => {
-      //   dataset.data.splice(num, 1);
-      // });
-      // chart.update();
-      chart2.update();
+      labelData.splice(num, 1);
+      console.log(labelDataStep);
+      chart.data.labels.splice(num, 1);
+      chart.data.datasets.forEach((dataset) => {
+        dataset.data.splice(num, 1);
+      });
+      console.log(chart.data.labels);
+      chart.update();
       endPeerConnection(rtcPeerConnection);
     }
   };
@@ -439,8 +450,6 @@ function createPeerConnection(strRemoteSocketID) {
 }
 
 function endPeerConnection(rtcPeerConnection) {
-  removeRemoteInfoElement(rtcPeerConnection.strRemoteSocketID);
-
   // DataChannelの終了
   if ("datachannel" in rtcPeerConnection) {
     rtcPeerConnection.datachannel.close();
@@ -535,8 +544,12 @@ function setupRTCPeerConnectionEventHandler(rtcPeerConnection) {
   rtcPeerConnection.onconnectionstatechange = () => {
     console.log("Event : Connection state change");
     console.log("- Connection state : ", rtcPeerConnection.connectionState);
-    if ("failed" === rtcPeerConnection.connectionState) {
-      // 「ビデオチャット相手との通信が切断」が"しばらく"続き、通信が復帰しないとき、Connection state failedとなる
+    if (
+      "failed" === rtcPeerConnection.connectionState ||
+      "disconnected" === rtcPeerConnection.connectionState
+    ) {
+      console.log("rtcPeerConnection");
+      console.log(rtcPeerConnection);
       endPeerConnection(rtcPeerConnection);
     }
   };
@@ -659,110 +672,14 @@ function addCandidate(rtcPeerConnection, candidate) {
 }
 
 // リモート情報表示用のHTML要素の追加
-function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
-  // IDの作成
-  let strElementTextID = "text_" + strRemoteSocketID;
-  let strElementTableID = "table_" + strRemoteSocketID;
-  let strElementChatID = "chat_" + strRemoteSocketID;
-
-  // // text HTML要素の作成
-  let elementText = document.createElement("input");
-  elementText.id = strElementTextID;
-  elementText.type = "text";
-  elementText.readOnly = "readonly";
-  elementText.value = strUserName;
-
-  // チャット表示
-  let elementChat = document.createElement("textarea");
-  elementChat.id = strElementChatID;
-  elementChat.cols = "40";
-  elementChat.rows = "2";
-  elementChat.readOnly = true;
-
-  // div HTML要素の作成
-  let elementDiv = document.createElement("div");
-  elementDiv.id = strElementTableID;
-  elementDiv.border = "1px solid black";
-
+function appendRemoteInfoElement(strUserName) {
   labelData.push({ y: strUserName, step: 0 });
-  chart2.data.labels.push(strUserName);
-  // chart.update();
-  chart2.update();
+  chart.data.labels.push(strUserName);
+  chart.update();
 }
 
-// リモート映像表示用のHTML要素の取得
-function getRemoteVideoElement(strRemoteSocketID) {
-  let strElementVideoID = "video_" + strRemoteSocketID;
-
-  return document.getElementById(strElementVideoID);
-}
-
-// リモート音声用のHTML要素の取得
-function getRemoteAudioElement(strRemoteSocketID) {
-  let strElementAudioID = "audio_" + strRemoteSocketID;
-
-  return document.getElementById(strElementAudioID);
-}
-
-// チャット用のHTML要素の取得
-function getRemoteChatElement(strRemoteSocketID) {
-  let strElementChatID = "chat_" + strRemoteSocketID;
-
-  return document.getElementById(strElementChatID);
-}
-
-// リモート情報表示用のHTML要素の削除
-function removeRemoteInfoElement(strRemoteSocketID) {
-  let strElementTableID = "table_" + strRemoteSocketID;
-  let elementTable = document.getElementById(strElementTableID);
-
-  if (!elementTable) {
-    console.error(
-      "Unexpected : Remote Video Element is not exist. RemoteSocketID = ",
-      strRemoteSocketID
-    );
-  }
-  g_tmp.removeChild(elementTable);
-}
-
-// var ctx = document.getElementById("myChart").getContext("2d");
-// var canvas = document.getElementById("myChart");
-var ctx2 = document.getElementById("myChart2").getContext("2d");
-var canvas2 = document.getElementById("myChart2");
-// const cfg = {
-//   type: "bar",
-//   data: {
-//     datasets: [
-//       {
-//         label: "Steps",
-//         data: labelData,
-//         parsing: {
-//           xAxisKey: "step",
-//         },
-//       },
-//     ],
-//   },
-//   options: {
-//     responsive: true,
-//     indexAxis: "y",
-//     layout: {
-//       padding: {
-//         left: 0,
-//         right: 0,
-//       },
-//     },
-//     scales: {
-//       x: {
-//         suggestedMax: 20,
-//       },
-//     },
-//   },
-// };
-// Chart.defaults.font.size = 25;
-// Chart.defaults.font.family = "brandon-grotesque, sans-serif";
-// var chart = new Chart(ctx, cfg);
-
-const cfg2 = {
+const context = document.getElementById("chart").getContext("2d");
+const chart = new Chart(context, {
   type: "doughnut",
   data: {
     datasets: [
@@ -775,8 +692,7 @@ const cfg2 = {
           "rgb(75, 192, 192)",
           "rgba(0,0,0,0)",
         ],
-        // data: labelDataStep,
-        data: [10, 10, 10, 10],
+        data: [1, 1, 1, 1],
       },
     ],
   },
@@ -786,13 +702,8 @@ const cfg2 = {
       legend: {
         position: "top",
       },
-      title: {
-        display: false,
-        text: "Chart.js Doughnut Chart",
-      },
     },
   },
-};
+});
 Chart.defaults.font.size = 25;
 Chart.defaults.font.family = "brandon-grotesque, sans-serif";
-var chart2 = new Chart(ctx2, cfg2);
