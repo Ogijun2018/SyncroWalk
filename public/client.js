@@ -31,7 +31,7 @@ let THRESHOLD = 2400 - 1;
 let changeCount = 0;
 
 // 元の単語: ハンガー: 0, 鉛筆: 1, 樽: 2, 靴: 3
-let wordNum = 0;
+let wordNum = 2;
 
 let g_mapRtcPeerConnection = new Map();
 
