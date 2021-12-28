@@ -27,11 +27,11 @@ let exportData_min = [];
 let startFlag = false;
 
 // 単語が変更されるまでの秒数（ms）
-let THRESHOLD = 2400 - 1;
+let THRESHOLD = 1200 - 1;
 let changeCount = 0;
 
 // 元の単語: ハンガー: 0, 鉛筆: 1, 樽: 2, 靴: 3
-let wordNum = 2;
+let wordNum = 1;
 
 let g_mapRtcPeerConnection = new Map();
 
@@ -107,7 +107,6 @@ function startExperiment() {
       sample[i] -= exportData_min[0][i];
     }
     exportData_min.push(sample.slice());
-    console.log("6秒ごとのデータ");
     console.log(exportData_min);
   };
   // 60sごとに運動時間を取得
