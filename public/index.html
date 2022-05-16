@@ -23,16 +23,16 @@
         v44h-352z" />
   </defs>
   <g class="parallax1">
-    <use xlink:href="#gentle-wave" x="50" y="3" fill="#ef4565"/>
+    <use xlink:href="#gentle-wave" x="120" y="13" fill="#e6e6e6"/>
   </g>
   <g class="parallax2">
-    <use xlink:href="#gentle-wave" x="50" y="0" fill="#90b4ce"/>
+    <use xlink:href="#gentle-wave" x="20" y="10" fill="#90b4ce"/>
   </g>
   <g class="parallax3">
-    <use xlink:href="#gentle-wave" x="50" y="9" fill="#3da9fc"/>
+    <use xlink:href="#gentle-wave" x="35" y="19" fill="#4a4a4a"/>
   </g>
   <g class="parallax4">
-    <use xlink:href="#gentle-wave" x="50" y="6" fill="#094067"/>  
+    <use xlink:href="#gentle-wave" x="90" y="16" fill="#094067"/>  
   </g>
 </svg>
 
@@ -40,6 +40,7 @@
   <div id="smartphone" style="display: none;">
     <h1 id="hero">SyncroWalk</h1>
     <div id="div_join_screen">
+      <div id="sensorrequest" onclick="ClickRequestDeviceSensor();"><p id="sensoricon">>></p></div>
       <!-- エンターキーによるボタン押下を行うために、<button>ではなく<form>と<input type="submit">を使用。
       ボタン押下(=submit)時にページリロードが行われないように、onsubmitの設定の最後に"return false;"を追加 -->
       <form id="user_form" action="" onsubmit="onsubmitButton_Join(); return false;">
@@ -51,28 +52,24 @@
     <div id="div_chat_screen">
       <div id="div_userinfo">
         <input type="text" id="text_username" readonly="readonly">
-        <div>
-          <!-- 加速度 XMIN: <span id="my_acg_x"></span>, XMAX: <span id="XMAX"></span>, YMIN: <span id="my_acg_y"></span>, YMAX: <span id="YMAX"></span>, ZMIN: <span id="my_acg_z"></span> ZMAX: <span id="ZMAX"></span> -->
-          <!-- <br />
-          GAMMA: <span id="my_gamma"></span>, BETA: <span id="my_beta"></span>, ALPHA: <span id="my_alpha"></span>
-          <br /> -->
-          歩数: <span id="step"></span>
-        </div>
       </div>
       <!-- <button id="control_data" onclick="stopSendData()">Stop!</button> -->
     </div>
   </div>
   <div id="desktop" style="display: none;">
     <h1>SyncroWalk</h1>
-    <div id="tmp"></div>
+    <div id="wordContainer"><span id="word">Start</span></div>
+    <div id="sumContainer">
+      ExPoint: <span id="sum"></span>
+    </div>
+    <button id="exportButton" type="button" onclick="exportData();">Download</button>
+    <button id="startButton" type="button" onclick="startExperiment();">測定開始</button>
     <div id="sample">
       <div id="step">
-        <canvas id="myChart"></canvas>
+        <canvas id="chart"></canvas>
       </div>
     </div>
   </div>
-    <!-- Script -->
-    <script type="text/javascript" src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@3.6.0/dist/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>

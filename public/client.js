@@ -4,47 +4,62 @@ const g_elementDivJoinScreen = document.getElementById("div_join_screen");
 const g_elementDivChatScreen = document.getElementById("div_chat_screen");
 const g_elementInputUserName = document.getElementById("input_username");
 const join_alert = document.getElementById("alert");
+const sum_momentum = document.getElementById("sum");
+const word = document.getElementById("word");
 
 const g_elementDivUserInfo = document.getElementById("div_userinfo");
-const g_tmp = document.getElementById("tmp");
 const g_elementTextUserName = document.getElementById("text_username");
 const smartphoneScreen = document.getElementById("smartphone");
 const desktopScreen = document.getElementById("desktop");
 
 let filterData = { x: 0, y: 0, z: 0 };
 let axis_result = { x: 0, y: 0, z: 0 };
-let axis_new = { x: 0, y: 0, z: 0 };
-let axis_old = { x: 0, y: 0, z: 0 };
 let deviceMotionData = { x: 0, y: 0, z: 0 };
 let deviceOrientationData = { gamma: null, beta: null, alpha: null };
 let username = "";
 let labelData = [];
+let labelDataStep = [];
+let labelDataStepTemp = [0, 0, 0, 0];
+// 一つのしりとりが終了するまでに各自が運動した時間
+let exportData_word = [];
+// 1分ごとに運動した時間
+let exportData_min = [];
+let startFlag = false;
+
+// 単語が変更されるまでの秒数（ms）
+let THRESHOLD = 1200 - 1;
+let changeCount = 0;
+
+// 元の単語: ハンガー: 0, 鉛筆: 1, 樽: 2, 靴: 3
+let wordNum = 2;
 
 let g_mapRtcPeerConnection = new Map();
 
-// 動的しきい値のサンプル数
-const THRESHOLD = 50;
 let stepCount = 0;
-let sampleCount = 0;
 let filterCount = 0;
+let allCount = 0;
 
-// make the maximum register min and minimum register max
-// so that they can be updated at the next cycle immediately
-let acXmin,
-  acYmin,
-  acZmin = 100;
-let acXmax,
-  acYmax,
-  acZmax = -100;
+var result = [];
 
-let dcX, dcY, dcZ;
+function getCSV() {
+  var req = new XMLHttpRequest();
+  req.open("get", "shiritori.csv", true);
+  req.send(null);
 
-// 加速度変化の最も大きい軸
-let thresholdLevel = 0;
+  req.onload = function () {
+    convertCSVtoArray(req.responseText);
+  };
+}
 
-// クライアントからサーバーへの接続要求
+function convertCSVtoArray(str) {
+  var tmp = str.split("\n");
+  for (var i = 0; i < tmp.length; ++i) {
+    result[i] = tmp[i].split(",");
+  }
+}
+
+getCSV();
 const g_socket = io.connect();
-
 const IAM = {
   token: null,
 };
@@ -68,6 +83,62 @@ if (device() === "mobile") {
   smartphoneScreen.style.display = "flex";
 } else if (device() === "desktop") {
   desktopScreen.style.display = "flex";
+}
+
+function startExperiment() {
+  startFlag = true;
+  for (let i = 0; i < labelDataStepTemp.length; i++) {
+    labelDataStepTemp[i] = labelDataStep[i];
+  }
+  allCount = 0;
+  let sample = [0, 0, 0, 0];
+  for (let i = 0; i < sample.length; i++) {
+    sample[i] = labelDataStep[i] - labelDataStepTemp[i];
+  }
+  sample.push(THRESHOLD - allCount);
+  chart.data.datasets[0].data = sample;
+  chart.update();
+  exportData_min.push(labelDataStep.slice());
+  document.getElementById("startButton").disabled = true;
+
+  const log = function () {
+    let sample = labelDataStep.slice();
+    for (let i = 0; i < sample.length; i++) {
+      sample[i] -= exportData_min[0][i];
+    }
+    exportData_min.push(sample.slice());
+    console.log(exportData_min);
+  };
+  // 60sごとに運動時間を取得
+  setInterval(log, 60000);
+  // setInterval(log, 6000);
+}
+
+// 配列をcsvで保存するfunction
+function exportData() {
+  let csvContent = "data:text/csv;charset=utf-8,";
+  exportData_word.forEach(function (rowArray) {
+    let row = rowArray.join(",");
+    csvContent += row + "\r\n";
+  });
+  var encodedUri = encodeURI(csvContent);
+  var link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "Data_word.csv");
+  document.body.appendChild(link);
+  link.click();
+
+  csvContent = "data:text/csv;charset=utf-8,";
+  exportData_min.forEach(function (rowArray) {
+    let row = rowArray.join(",");
+    csvContent += row + "\r\n";
+  });
+  encodedUri = encodeURI(csvContent);
+  link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "Data_min.csv");
+  document.body.appendChild(link);
+  link.click();
 }
 
 function onsubmitButton_Join() {
@@ -94,9 +165,8 @@ function onsubmitButton_Join() {
 function deviceMotion(e) {
   e.preventDefault();
   let ac = e.acceleration;
-  let acg = e.accelerationIncludingGravity;
 
-  if (filterCount < 3) {
+  if (filterCount < 5) {
     // save the last 3-axis samples to the shift registers
     // for sum filtering
     filterCount++;
@@ -107,34 +177,11 @@ function deviceMotion(e) {
   } else {
     filterCount = 0;
     axis_result = {
-      x: filterData.x / 4,
-      y: filterData.y / 4,
-      z: filterData.z / 4,
+      x: filterData.x / 5,
+      y: filterData.y / 5,
+      z: filterData.z / 5,
     };
     filterData = { x: 0, y: 0, z: 0 };
-  }
-
-  // find 3-axis max value and min value
-  acXmin = Math.min(axis_result.x, acXmin);
-  acYmin = Math.min(axis_result.y, acYmin);
-  acZmin = Math.min(axis_result.z, acZmin);
-  acXmax = Math.max(axis_result.x, acXmax);
-  acYmax = Math.max(axis_result.y, acYmax);
-  acZmax = Math.max(axis_result.z, acZmax);
-
-  sampleCount++;
-
-  if (sampleCount > THRESHOLD) {
-    sampleCount = 0;
-    // compute peak-to-peak value and dc value for each axis
-    dcX = (acXmax - acXmin) / 2;
-    dcY = (acYmax - acYmin) / 2;
-    dcZ = (acZmax - acZmin) / 2;
-    // reinitate the values of the max and min for comparing
-    acXmax = acYmax = acZmax = -100;
-    acXmin = acYmin = acZmin = 100;
-    // based on the Vp-p, set the dynamic precision
-    // these values are determined by customer
   }
 
   let resultVector = Math.sqrt(
@@ -144,61 +191,17 @@ function deviceMotion(e) {
   );
 
   // 動的精度はとりあえず1.0の固定値
-  if (resultVector > 1.0) {
-    axis_old = { x: axis_new.x, y: axis_new.y, z: axis_new.z };
-    axis_new = { x: axis_result.x, y: axis_result.y, z: axis_result.z };
+  if (resultVector > 4.0) {
+    stepCount++;
+    allCount++;
+    sum_momentum.innerHTML = allCount;
+    SendDeviceInfo();
   } else {
-    axis_old = { x: axis_new.x, y: axis_new.y, z: axis_new.z };
     return;
   }
-
-  // find the axis whose acceleration change is the largest
-  let abs_x_change = Math.abs(axis_result.x);
-  let abs_y_change = Math.abs(axis_result.y);
-  let abs_z_change = Math.abs(axis_result.z);
-  if (abs_x_change > abs_y_change && abs_x_change > abs_z_change) {
-    thresholdLevel = dcX;
-    if (axis_old.x > thresholdLevel && thresholdLevel > axis_new.x) {
-      stepCount++;
-      document.getElementById("step").innerHTML = stepCount;
-      console.log("stepCount up");
-      SendDeviceInfo();
-    }
-  } else if (abs_y_change > abs_x_change && abs_y_change > abs_z_change) {
-    thresholdLevel = dcY;
-    if (axis_old.y > thresholdLevel && thresholdLevel > axis_new.y) {
-      stepCount++;
-      document.getElementById("step").innerHTML = stepCount;
-      console.log("stepCount up");
-      SendDeviceInfo();
-    }
-  } else if (abs_z_change > abs_x_change && abs_z_change > abs_y_change) {
-    thresholdLevel = dcZ;
-    if (axis_old.z > thresholdLevel && thresholdLevel > axis_new.z) {
-      stepCount++;
-      document.getElementById("step").innerHTML = stepCount;
-      console.log("stepCount up");
-      SendDeviceInfo();
-    }
-  }
-
-  deviceMotionData.x = ac.x;
-  deviceMotionData.y = ac.y;
-  deviceMotionData.z = ac.z;
 }
 
-function deviceOrientation(e) {
-  e.preventDefault();
-  let gamma = e.gamma; // Left/Right
-  let beta = e.beta; // Front/Back
-  let alpha = e.alpha; // Direction
-  deviceOrientationData.gamma = gamma;
-  deviceOrientationData.beta = beta;
-  deviceOrientationData.alpha = alpha;
-  // document.getElementById("my_gamma").innerHTML = Math.round(gamma * 10) / 10;
-  // document.getElementById("my_beta").innerHTML = Math.round(beta * 10) / 10;
-  // document.getElementById("my_alpha").innerHTML = Math.round(alpha * 10) / 10;
-}
+function deviceOrientation(e) {}
 
 function ClickRequestDeviceSensor() {
   //. ユーザーに「許可」を明示させる必要がある
@@ -206,7 +209,7 @@ function ClickRequestDeviceSensor() {
     .then(function (response) {
       if (response === "granted") {
         window.addEventListener("deviceorientation", deviceOrientation);
-        $("#sensorrequest").css("display", "none");
+        document.getElementById("sensorrequest").style.display = "none";
       }
     })
     .catch(function (e) {
@@ -217,7 +220,7 @@ function ClickRequestDeviceSensor() {
     .then(function (response) {
       if (response === "granted") {
         window.addEventListener("devicemotion", deviceMotion);
-        $("#sensorrequest").css("display", "none");
+        document.getElementById("sensorrequest").style.display = "none";
       }
     })
     .catch(function (e) {
@@ -233,11 +236,9 @@ if (window.DeviceOrientationEvent) {
     DeviceOrientationEvent.requestPermission &&
     typeof DeviceOrientationEvent.requestPermission === "function"
   ) {
-    $("#div_chat_screen").css("display", "none");
-    var banner =
-      '<div id="sensorrequest" onclick="ClickRequestDeviceSensor();"><p id="sensoricon">>></p></div>';
-    $("#div_join_screen").prepend(banner);
+    document.getElementById("div_chat_screen").style.display = "none";
   } else {
+    document.getElementById("sensorrequest").style.display = "none";
     window.addEventListener("deviceorientation", deviceOrientation);
   }
 }
@@ -252,27 +253,21 @@ if (window.DeviceMotionEvent) {
   }
 }
 
-window.addEventListener("beforeunload", (event) => {
+window.addEventListener("pagehide", (event) => {
   event.preventDefault();
-  stopSendData(); // チャットからの離脱
-  g_socket.disconnect(); // Socket.ioによるサーバーとの接続の切断
-  e.returnValue = ""; // Chrome では returnValue を設定する必要がある
-  return ""; // Chrome 以外では、return を設定する必要がある
+  stopSendData();
+  g_socket.disconnect();
+  e.returnValue = "";
+  return "";
 });
 
 function SendDeviceInfo() {
-  console.log("Send Device Info");
-
   if (!g_mapRtcPeerConnection.size) {
-    // コネクションオブジェクトがない
-    // alert("Connection object does not exist!!!");
+    alert(
+      "「閉じる」を押したあとブラウザを更新して再度名前を入力してください。"
+    );
     return;
   }
-  //if( !isDataChannelOpen( g_rtcPeerConnection ) )
-  //{   // DataChannelオブジェクトが開いていない
-  //    alert( "Datachannel is not open." );
-  //    return;
-  //}
   // メッセージをDataChannelを通して相手に直接送信
   g_mapRtcPeerConnection.forEach((rtcPeerConnection) => {
     console.log("- Send Message through DataChannel");
@@ -280,8 +275,6 @@ function SendDeviceInfo() {
       JSON.stringify({
         type: "message",
         data: {
-          deviceMotionData,
-          deviceOrientationData,
           stepCount,
           username,
         },
@@ -301,7 +294,6 @@ function stopSendData() {
     }
     endPeerConnection(rtcPeerConnection);
   });
-  // g_elementTextUserName.value = "";
 }
 
 // 接続時の処理
@@ -378,12 +370,9 @@ g_socket.on("signaling", (objData) => {
     console.log("Call : setOfferSDP_and_createAnswerSDP()");
     setOfferSDP_and_createAnswerSDP(rtcPeerConnection, objData.data); // 受信したSDPオブジェクトを渡す。
 
-    // リモートユーザー名の設定
-    //g_elementTextRemoteUserName.value = objData.username;
-    // リモート情報表示用のHTML要素の追加
+    // 送信元: スマートフォン, 送信先: デスクトップのとき
     if (device() === "desktop" && objData.device !== "desktop") {
-      console("appendRemoteInfoElement");
-      appendRemoteInfoElement(strRemoteSocketID, objData.username);
+      appendRemoteInfoElement(objData.username);
     }
   } else if ("answer" === objData.type) {
     // onclickButton_SetAnswerSDPthenChatStarts()と同様の処理
@@ -401,11 +390,9 @@ g_socket.on("signaling", (objData) => {
     console.log("Call : setAnswerSDP()");
     setAnswerSDP(rtcPeerConnection, objData.data); // 受信したSDPオブジェクトを渡す。
 
-    // リモートユーザー名の設定
-    //g_elementTextRemoteUserName.value = objData.username;
-    // リモート情報表示用のHTML要素の追加
+    // 送信元: スマートフォン, 送信先: デスクトップのとき
     if (device() === "desktop" && objData.device !== "desktop") {
-      appendRemoteInfoElement(strRemoteSocketID, objData.username);
+      appendRemoteInfoElement(objData.username);
     }
   } else if ("candidate" === objData.type) {
     let rtcPeerConnection = g_mapRtcPeerConnection.get(strRemoteSocketID);
@@ -436,25 +423,40 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
     let objData = JSON.parse(event.data);
 
     if ("message" === objData.type) {
-      console.log("message");
-      console.log(objData);
       // 受信メッセージをメッセージテキストエリアへ追加
       let stepCount = objData.data.stepCount;
-      let acg_x = Math.round(objData.data.deviceMotionData.x * 100) / 100;
-      let acg_y = Math.round(objData.data.deviceMotionData.y * 100) / 100;
-      let acg_z = Math.round(objData.data.deviceMotionData.z * 100) / 100;
-      let gamma =
-        Math.round(objData.data.deviceOrientationData.gamma * 100) / 100;
-      let beta =
-        Math.round(objData.data.deviceOrientationData.beta * 100) / 100;
-      let alpha =
-        Math.round(objData.data.deviceOrientationData.alpha * 100) / 100;
-
-      let element = getRemoteChatElement(objData.from);
-      // element.innerHTML = `歩数 ${stepCount}`;
-      // ここで歩数を更新する
+      allCount++;
+      labelDataStep = labelData.map((x) => x.step);
+      if (allCount > THRESHOLD) {
+        // 全体の運動がTHRESHOLDを超えたら、そこまでの運動を記録して一度リセットする
+        console.log("ここまでの運動を保存");
+        for (let i = 0; i < labelDataStepTemp.length; i++) {
+          labelDataStepTemp[i] = labelDataStep[i];
+        }
+        let sample2 = labelDataStepTemp.slice();
+        for (let i = 0; i < sample2.length; i++) {
+          sample2[i] -= exportData_min[0][i];
+        }
+        exportData_word.push(sample2.slice());
+        console.log("単語ごとのデータ");
+        console.log(exportData_word);
+        changeCount++;
+        allCount = 0;
+      }
+      sum_momentum.innerHTML = allCount;
+      if (startFlag) {
+        word.innerHTML = result[changeCount][wordNum];
+      }
+      // 歩数更新
       let temp = labelData.find((v) => v.y === objData.data.username);
       temp.step = stepCount;
+
+      let sample = [0, 0, 0, 0];
+      for (let i = 0; i < sample.length; i++) {
+        sample[i] = labelDataStep[i] - labelDataStepTemp[i];
+      }
+      sample.push(THRESHOLD - allCount);
+      chart.data.datasets[0].data = sample;
       chart.update();
     } else if ("offer" === objData.type) {
       // 受信したOfferSDPの設定とAnswerSDPの作成
@@ -469,8 +471,11 @@ function setupDataChannelEventHandler(rtcPeerConnection) {
       console.log("Call : addCandidate()");
       addCandidate(rtcPeerConnection, objData.data);
     } else if ("leave" === objData.type) {
+      // TODO: ユーザーが退出したときにユーザー情報を消す
       console.log("Call : endPeerConnection()");
       let num = labelData.findIndex((v) => v.y === objData.data);
+      labelData.splice(num, 1);
+      console.log(labelDataStep);
       chart.data.labels.splice(num, 1);
       chart.data.datasets.forEach((dataset) => {
         dataset.data.splice(num, 1);
@@ -516,8 +521,6 @@ function createPeerConnection(strRemoteSocketID) {
 }
 
 function endPeerConnection(rtcPeerConnection) {
-  removeRemoteInfoElement(rtcPeerConnection.strRemoteSocketID);
-
   // DataChannelの終了
   if ("datachannel" in rtcPeerConnection) {
     rtcPeerConnection.datachannel.close();
@@ -612,8 +615,12 @@ function setupRTCPeerConnectionEventHandler(rtcPeerConnection) {
   rtcPeerConnection.onconnectionstatechange = () => {
     console.log("Event : Connection state change");
     console.log("- Connection state : ", rtcPeerConnection.connectionState);
-    if ("failed" === rtcPeerConnection.connectionState) {
-      // 「ビデオチャット相手との通信が切断」が"しばらく"続き、通信が復帰しないとき、Connection state failedとなる
+    if (
+      "failed" === rtcPeerConnection.connectionState ||
+      "disconnected" === rtcPeerConnection.connectionState
+    ) {
+      console.log("rtcPeerConnection");
+      console.log(rtcPeerConnection);
       endPeerConnection(rtcPeerConnection);
     }
   };
@@ -736,126 +743,38 @@ function addCandidate(rtcPeerConnection, candidate) {
 }
 
 // リモート情報表示用のHTML要素の追加
-function appendRemoteInfoElement(strRemoteSocketID, strUserName) {
-  // <div border="1 solid #000000"><input type="text" id="text_remote_username" readonly="readonly"><br /><video id="video_remote" width="320" height="240" style="border: 1px solid black;"></video><audio id="audio_remote"></audio></div>
-
-  // IDの作成
-  let strElementTextID = "text_" + strRemoteSocketID;
-  // let strElementVideoID = "video_" + strRemoteSocketID;
-  // let strElementAudioID = "audio_" + strRemoteSocketID;
-  let strElementTableID = "table_" + strRemoteSocketID;
-  let strElementChatID = "chat_" + strRemoteSocketID;
-
-  // // text HTML要素の作成
-  let elementText = document.createElement("input");
-  elementText.id = strElementTextID;
-  elementText.type = "text";
-  elementText.readOnly = "readonly";
-  elementText.value = strUserName;
-
-  // // video HTML要素の作成
-  // let elementVideo = document.createElement("video");
-  // elementVideo.id = strElementVideoID;
-  // elementVideo.width = "0";
-  // elementVideo.height = "0";
-  // elementVideo.style.border = "1px solid black";
-  // elementVideo.autoplay = true;
-
-  // // audio HTML要素の作成
-  // let elementAudio = document.createElement("audio");
-  // elementAudio.id = strElementAudioID;
-  // elementAudio.autoplay = true;
-
-  // チャット表示
-  let elementChat = document.createElement("textarea");
-  elementChat.id = strElementChatID;
-  elementChat.cols = "40";
-  elementChat.rows = "2";
-  elementChat.readOnly = true;
-
-  // div HTML要素の作成
-  let elementDiv = document.createElement("div");
-  elementDiv.id = strElementTableID;
-  elementDiv.border = "1px solid black";
-
-  // 要素の配置
-  // elementDiv.appendChild(elementText); // ユーザー名
-  // elementDiv.appendChild(document.createElement("br")); // 改行
-  // // elementDiv.appendChild(elementVideo); // Video
-  // // elementDiv.appendChild(elementAudio); // Audio
-  // elementDiv.appendChild(elementChat); // チャット
-  // g_tmp.appendChild(elementDiv);
-
+function appendRemoteInfoElement(strUserName) {
   labelData.push({ y: strUserName, step: 0 });
+  chart.data.labels.push(strUserName);
   chart.update();
 }
 
-// リモート映像表示用のHTML要素の取得
-function getRemoteVideoElement(strRemoteSocketID) {
-  let strElementVideoID = "video_" + strRemoteSocketID;
-
-  return document.getElementById(strElementVideoID);
-}
-
-// リモート音声用のHTML要素の取得
-function getRemoteAudioElement(strRemoteSocketID) {
-  let strElementAudioID = "audio_" + strRemoteSocketID;
-
-  return document.getElementById(strElementAudioID);
-}
-
-// チャット用のHTML要素の取得
-function getRemoteChatElement(strRemoteSocketID) {
-  let strElementChatID = "chat_" + strRemoteSocketID;
-
-  return document.getElementById(strElementChatID);
-}
-
-// リモート情報表示用のHTML要素の削除
-function removeRemoteInfoElement(strRemoteSocketID) {
-  let strElementTableID = "table_" + strRemoteSocketID;
-  let elementTable = document.getElementById(strElementTableID);
-
-  if (!elementTable) {
-    console.error(
-      "Unexpected : Remote Video Element is not exist. RemoteSocketID = ",
-      strRemoteSocketID
-    );
-  }
-  g_tmp.removeChild(elementTable);
-}
-
-var ctx = document.getElementById("myChart").getContext("2d");
-var canvas = document.getElementById("myChart");
-const cfg = {
-  type: "bar",
+const context = document.getElementById("chart").getContext("2d");
+const chart = new Chart(context, {
+  type: "doughnut",
   data: {
     datasets: [
       {
-        label: "Steps",
-        data: labelData,
-        parsing: {
-          xAxisKey: "step",
-        },
+        label: "Point",
+        backgroundColor: [
+          "rgb(255, 99, 132)",
+          "rgb(54, 162, 235)",
+          "rgb(255, 205, 86)",
+          "rgb(75, 192, 192)",
+          "rgba(0,0,0,0)",
+        ],
+        data: [1, 1, 1, 1],
       },
     ],
   },
   options: {
     responsive: true,
-    indexAxis: "y",
-    layout: {
-      padding: {
-        left: 0,
-        right: 0,
-      },
-    },
-    scales: {
-      x: {
-        suggestedMax: 20,
+    plugins: {
+      legend: {
+        position: "top",
       },
     },
   },
-};
+});
 Chart.defaults.font.size = 25;
 Chart.defaults.font.family = "brandon-grotesque, sans-serif";
-var chart = new Chart(ctx, cfg);

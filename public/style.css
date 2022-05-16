@@ -164,23 +164,46 @@ input[type="submit"] {
 #sample {
   display: flex;
   flex-direction: row;
+  width: 115vh;
+  justify-content: center;
+  align-self: center;
 }
 
 #step {
   width: 70%;
-  /* height: 40%; */
+  height: 40%;
 }
 
 #user_name {
   display: flex;
   flex-direction: column;
 }
-/* #myChart {
-  width: 100px;
-  height: 80%;
-} */
 
-.parallax1 > use {
+#sumContainer {
+  position: absolute;
+  margin-top: 10vh;
+  font-size: 50px;
+}
+
+#exportButton {
+  position: absolute;
+  margin-top: 20vh;
+}
+
+#startButton {
+  position: absolute;
+  margin-top: 25vh;
+}
+
+#wordContainer {
+  position: absolute;
+  /* justify-content: center; */
+  margin-top: 45vh;
+  align-self: center;
+  font-size: 70px;
+}
+
+/* .parallax1 > use {
   animation: move-forever1 10s linear infinite;
   &:nth-child(1) {
     animation-delay: -2s;
@@ -236,4 +259,4 @@ input[type="submit"] {
   100% {
     transform: translate(85px, 0%);
   }
-}
+} */
